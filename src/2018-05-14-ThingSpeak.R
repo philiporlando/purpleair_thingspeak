@@ -114,11 +114,11 @@ thingspeak_collect <- function(row, start, end) {
     
   
   # make weekly request to api (need to vectorize this soooo bad....)
-  for (row in 1:nrow(weeks)) {
+  for (i in 1:nrow(weeks)) {
     
     # extract start and end dates from our weekly sequence
-    start_date <- weeks$date[row]
-    end_date <- weeks$date[row+1]
+    start_date <- weeks$date[i]
+    end_date <- weeks$date[i+1]
     
     # primary url to pull from api
     primary_url <- paste0("https://api.thingspeak.com/channels/"
@@ -232,13 +232,14 @@ thingspeak_collect <- function(row, start, end) {
 
 # for testing purposes
 row <- pa_sf[1,]
-df <- thingspeak_read(row, "2017-05-14", "2018-05-21")
+
+df <- thingspeak_collect(row, "2018-05-07", "2018-05-14")
+
+
 
 # apply our read function across each row of our pa_sf df
 apply(pa_sf
       ,MARGIN = 1 # applies over rows
       ,FUN = thingspeak_collect
       )
-
-thingspeak_collect(row, "2018-05-07", "2018-05-14")
 
