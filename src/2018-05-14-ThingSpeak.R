@@ -48,7 +48,8 @@ epsg_26911 <- "+proj=utm +zone=10 +ellps=GRS80 +datum=NAD83 +units=m +no_defs"
 epsg_2838 <- "+proj=lcc +lat_1=46 +lat_2=44.33333333333334 +lat_0=43.66666666666666 +lon_0=-120.5 +x_0=2500000 +y_0=0 +ellps=GRS80 +units=m +no_defs "
 
 # calling our purpleair json webscrape function to generate a list of ALL sensors
-# python.load("./purpleair_id_key.py") # this unexpectedly crashes when running python within RStudio
+python.load("./purpleair_id_key.py"
+            ,get.exception = TRUE) # this unexpectedly crashes when running python within RStudio
 # run from bash instead...
 
 # reading in shapefiles for the entire US
@@ -86,6 +87,17 @@ thingspeak_collect <- function(row, start_date, end_date) {
   # secondary api id and key pairs
   secondary_id <- row$THINGSPEAK_SECONDARY_ID
   secondary_key <- row$THINGSPEAK_SECONDARY_ID_READ_KEY
+  
+  
+  # max request length is 8000
+  
+  # need to break up our entire request into 8000 length chunks...
+  weeks <- seq(from = as.POSIXct(start_date, tz = "UTC")
+      ,to = as.POSIXct(end_date, tz = "UTC")
+      ,by = "week") %>% as.data.frame()
+  colnames(weeks) <- "date"
+  class(weeks)
+  
   
   # primary url to pull from api
   primary_url <- paste0("https://api.thingspeak.com/channels/"
@@ -193,7 +205,7 @@ thingspeak_collect <- function(row, start_date, end_date) {
 
 # for testing purposes
 row <- pa_sf[1,]
-df <- thingspeak_collect(row, "2016-01-01", "2018-05-15")
+df <- thingspeak_collect(row, "2017-05-14", "2018-05-21")
 
 # apply our read function across each row of our pa_sf df
 apply(pa_sf
