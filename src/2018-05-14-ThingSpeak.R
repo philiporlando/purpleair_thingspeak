@@ -190,7 +190,7 @@ thingspeak_collect <- function(row, start_date, end_date) {
 }
 
 
-# testing purposes
+# for testing purposes
 row <- pa_sf[1,]
 df <- thingspeak_collect(row, "2016-01-01", "2018-05-15")
 
@@ -200,30 +200,3 @@ apply(pa_sf
       ,FUN = thingspeak_collect
       )
 
-
-# star lab cully
-url <- "https://api.thingspeak.com/channels/341967/feeds.json?api_key=KDMDB47BY5X1PW1A&start=2016-01-01%2000:00:00&end=2019-01-01%2000:00:00"
-r <- GET(url)
-r$status_code
-asdf <- fromJSON(url)
-
-
-# getting ready to iterate
-# these variables will be vectors eventually...
-id <- "341967"
-key <- "KDMDB47BY5X1PW1A"
-start_date <- "2016-01-01"
-end_date <- "2018-05-15"
-url <- paste0("https://api.thingspeak.com/channels/"
-              ,id
-              ,"/feeds.json?api_key="
-              ,key
-              ,"&start="
-              ,start_date
-              ,"%2000:00:00&end="
-              ,end_date,
-              "%2000:00:00")
-r <- GET(url)
-r$status_code
-asdf <- fromJSON(url)
-head(asdf$feeds)
