@@ -78,13 +78,15 @@ pa_sf <- pa_sf[pdx, ]
 # create a custom url generating function for each row
 thingspeak_collect <- function(row, start_date, end_date) {
   
+  # primary api id and key pairs
   primary_id <- row$THINGSPEAK_PRIMARY_ID
   primary_key <- row$THINGSPEAK_PRIMARY_ID_READ_KEY
   
+  # secondary api id and key pairs
   secondary_id <- row$THINGSPEAK_SECONDARY_ID
   secondary_key <- row$THINGSPEAK_SECONDARY_ID_READ_KEY
   
-  
+  # primary url to pull from api
   primary_url <- paste0("https://api.thingspeak.com/channels/"
                         ,primary_id
                         ,"/feeds.json?api_key="
@@ -92,35 +94,111 @@ thingspeak_collect <- function(row, start_date, end_date) {
                         ,"&start="
                         ,start_date
                         ,"%2000:00:00&end="
-                        ,end_date,
-                        "%2000:00:00")
+                        ,end_date
+                        ,"%2000:00:00")
   
-  primary_url <- paste0("https://api.thingspeak.com/channels/"
+  # secondary url to pull from api
+  secondary_url <- paste0("https://api.thingspeak.com/channels/"
                         ,secondary_id
                         ,"/feeds.json?api_key="
                         ,secondary_key
                         ,"&start="
                         ,start_date
                         ,"%2000:00:00&end="
-                        ,end_date,
-                        "%2000:00:00")
+                        ,end_date
+                        ,"%2000:00:00")
   
   
   # this needs exception handling!
   primary_request <- fromJSON(primary_url)
   secondary_request <- fromJSON(secondary_url)
   
+  # channel A field names
+  primary_fields_a <- c("created_at"
+                        ,"entry _id"
+                        ,"pm1_0_atm"
+                        ,"pm2_5_atm"
+                        ,"pm10_0_atm"
+                        ,"uptime_min"
+                        ,"rssi_wifi_strength"
+                        ,"temp_f"
+                        ,"humidity"
+                        ,"pm2_5_cf_1")
+  
+  secondary_fields_a <- c("created_at"
+                          ,"entry_id"
+                          ,"p_0_3_um"
+                          ,"p_0_5_um"
+                          ,"p_1_0_um"
+                          ,"p_2_5_um"
+                          ,"p_5_0_um"
+                          ,"p_10_0_um"
+                          ,"p1_0_cf_1"
+                          ,"p10_0_cf_1")
+  
+  #channel B field names
+  primary_fields_b <- c("created_at"
+                        ,"entry_id"
+                        ,"pm1_0_atm"
+                        ,"pm2_5_atm"
+                        ,"pm10_0_atm"
+                        ,"free_heap_memory"
+                        ,"analog_input"
+                        ,"sensor_firmware_pressure"
+                        ,"not_used"
+                        ,"pm2_5_cf_1")
+  
+  secondary_fields_b <- c("created_at"
+                          ,"entry_id"
+                          ,"p_0_3_um"
+                          ,"p_0_5_um"
+                          ,"p_1_0_um"
+                          ,"p_2_5_um"
+                          ,"p_5_0_um"
+                          ,"p_10_0_um"
+                          ,"pm1_0_cf_1"
+                          ,"pm10_0_cf_1")
+  
+  # A and B sensors provide different fields!
+  if (!is.na(row$ParentID)) {
+    
+    # assign A field names
+    primary_df <- primary_request$feeds
+    colnames(primary_df) <-primary_fields_a
+    
+    secondary_df <- secondary_request$feeds
+    colnames(secondary_df) <- secondary_fields_a
+    
+    
+  } else {
+    
+    # assign B field names
+    primary_df <- primary_request$feeds
+    colnames(primary_df) <-primary_fields_b
+    
+    secondary_df <- secondary_request$feeds
+    colnames(secondary_df) <- secondary_fields_b
+    
+  }
+
+  df <- full_join(primary_df, secondary_df)
+  
+  
+  return(df)
   
   
 }
 
 
+# testing purposes
+row <- pa_sf[1,]
+df <- thingspeak_collect(row, "2016-01-01", "2018-05-15")
+
+# apply our read function across each row of our pa_sf df
 apply(pa_sf
       ,MARGIN = 1 # applies over rows
-      ,FUN = 
+      ,FUN = thingspeak_collect
       )
-
-
 
 
 # star lab cully
