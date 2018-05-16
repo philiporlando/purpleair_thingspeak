@@ -75,8 +75,50 @@ pa_sf <- st_transform(pa_sf, crs = st_crs(pdx))
 # subsetting purpleair sensors that are contained within our urban area
 pa_sf <- pa_sf[pdx, ]
 
+# create a custom url generating function for each row
+thingspeak_collect <- function(row, start_date, end_date) {
+  
+  primary_id <- row$THINGSPEAK_PRIMARY_ID
+  primary_key <- row$THINGSPEAK_PRIMARY_ID_READ_KEY
+  
+  secondary_id <- row$THINGSPEAK_SECONDARY_ID
+  secondary_key <- row$THINGSPEAK_SECONDARY_ID_READ_KEY
+  
+  
+  primary_url <- paste0("https://api.thingspeak.com/channels/"
+                        ,primary_id
+                        ,"/feeds.json?api_key="
+                        ,primary_key
+                        ,"&start="
+                        ,start_date
+                        ,"%2000:00:00&end="
+                        ,end_date,
+                        "%2000:00:00")
+  
+  primary_url <- paste0("https://api.thingspeak.com/channels/"
+                        ,secondary_id
+                        ,"/feeds.json?api_key="
+                        ,secondary_key
+                        ,"&start="
+                        ,start_date
+                        ,"%2000:00:00&end="
+                        ,end_date,
+                        "%2000:00:00")
+  
+  
+  # this needs exception handling!
+  primary_request <- fromJSON(primary_url)
+  secondary_request <- fromJSON(secondary_url)
+  
+  
+  
+}
 
 
+apply(pa_sf
+      ,MARGIN = 1 # applies over rows
+      ,FUN = 
+      )
 
 
 
