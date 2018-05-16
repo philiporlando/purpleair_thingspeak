@@ -35,6 +35,7 @@ p_load(readr
        ,devtools
        ,httr
        ,jsonlite
+       ,lubridate
 )
 
 
@@ -48,8 +49,7 @@ epsg_26911 <- "+proj=utm +zone=10 +ellps=GRS80 +datum=NAD83 +units=m +no_defs"
 epsg_2838 <- "+proj=lcc +lat_1=46 +lat_2=44.33333333333334 +lat_0=43.66666666666666 +lon_0=-120.5 +x_0=2500000 +y_0=0 +ellps=GRS80 +units=m +no_defs "
 
 # calling our purpleair json webscrape function to generate a list of ALL sensors
-python.load("./purpleair_id_key.py"
-            ,get.exception = TRUE) # this unexpectedly crashes when running python within RStudio
+#python.load("./purpleair_id_key.py", get.exception = TRUE) # this unexpectedly crashes when running python within RStudio
 # run from bash instead...
 
 # reading in shapefiles for the entire US
@@ -77,8 +77,13 @@ pa_sf <- st_transform(pa_sf, crs = st_crs(pdx))
 # subsetting purpleair sensors that are contained within our urban area
 pa_sf <- pa_sf[pdx, ]
 
-# create a custom url generating function for each row
-thingspeak_collect <- function(row, start_date, end_date) {
+
+
+
+
+thingspeak_collect <- function(row, start, end) {
+  
+  # max request length is 8000
   
   # primary api id and key pairs
   primary_id <- row$THINGSPEAK_PRIMARY_ID
@@ -89,127 +94,151 @@ thingspeak_collect <- function(row, start_date, end_date) {
   secondary_key <- row$THINGSPEAK_SECONDARY_ID_READ_KEY
   
   
-  # max request length is 8000
-  
   # need to break up our entire request into 8000 length chunks...
-  weeks <- seq(from = as.POSIXct(start_date, tz = "UTC")
-      ,to = as.POSIXct(end_date, tz = "UTC")
-      ,by = "week") %>% as.data.frame()
+  weeks <- seq(from = as.Date(start)
+               ,to = as.Date(end)
+               ,by = "week") %>% as.data.frame()
+  
+  # assign vector name
   colnames(weeks) <- "date"
-  class(weeks)
+
+  # tidy attributes for our output dataframe
+  output_names <- c("created_at"
+                    ,"entry_id"
+                    ,"field"
+                    ,"value")  
   
+  # create empty dataframe to store all of our api request results
+  output_df <- data.frame(matrix(ncol = length(output_names)
+                                 ,nrow = 0))
+    
   
-  # primary url to pull from api
-  primary_url <- paste0("https://api.thingspeak.com/channels/"
-                        ,primary_id
-                        ,"/feeds.json?api_key="
-                        ,primary_key
-                        ,"&start="
-                        ,start_date
-                        ,"%2000:00:00&end="
-                        ,end_date
-                        ,"%2000:00:00")
-  
-  # secondary url to pull from api
-  secondary_url <- paste0("https://api.thingspeak.com/channels/"
-                        ,secondary_id
-                        ,"/feeds.json?api_key="
-                        ,secondary_key
-                        ,"&start="
-                        ,start_date
-                        ,"%2000:00:00&end="
-                        ,end_date
-                        ,"%2000:00:00")
-  
-  
-  # this needs exception handling!
-  primary_request <- fromJSON(primary_url)
-  secondary_request <- fromJSON(secondary_url)
-  
-  # channel A field names
-  primary_fields_a <- c("created_at"
-                        ,"entry _id"
-                        ,"pm1_0_atm"
-                        ,"pm2_5_atm"
-                        ,"pm10_0_atm"
-                        ,"uptime_min"
-                        ,"rssi_wifi_strength"
-                        ,"temp_f"
-                        ,"humidity"
-                        ,"pm2_5_cf_1")
-  
-  secondary_fields_a <- c("created_at"
+  # make weekly request to api (need to vectorize this soooo bad....)
+  for (row in 1:nrow(weeks)) {
+    
+    # extract start and end dates from our weekly sequence
+    start_date <- weeks$date[row]
+    end_date <- weeks$date[row+1]
+    
+    # primary url to pull from api
+    primary_url <- paste0("https://api.thingspeak.com/channels/"
+                          ,primary_id
+                          ,"/feeds.json?api_key="
+                          ,primary_key
+                          ,"&start="
+                          ,start_date
+                          ,"%2000:00:00&end="
+                          ,end_date
+                          ,"%2000:00:00")
+    
+    # secondary url to pull from api
+    secondary_url <- paste0("https://api.thingspeak.com/channels/"
+                            ,secondary_id
+                            ,"/feeds.json?api_key="
+                            ,secondary_key
+                            ,"&start="
+                            ,start_date
+                            ,"%2000:00:00&end="
+                            ,end_date
+                            ,"%2000:00:00")
+    
+    
+    # this needs exception handling!
+    primary_request <- fromJSON(primary_url)
+    secondary_request <- fromJSON(secondary_url)
+    
+    # channel A field names
+    primary_fields_a <- c("created_at"
+                          ,"entry _id"
+                          ,"pm1_0_atm"
+                          ,"pm2_5_atm"
+                          ,"pm10_0_atm"
+                          ,"uptime_min"
+                          ,"rssi_wifi_strength"
+                          ,"temp_f"
+                          ,"humidity"
+                          ,"pm2_5_cf_1")
+    
+    secondary_fields_a <- c("created_at"
+                            ,"entry_id"
+                            ,"p_0_3_um"
+                            ,"p_0_5_um"
+                            ,"p_1_0_um"
+                            ,"p_2_5_um"
+                            ,"p_5_0_um"
+                            ,"p_10_0_um"
+                            ,"p1_0_cf_1"
+                            ,"p10_0_cf_1")
+    
+    #channel B field names
+    primary_fields_b <- c("created_at"
                           ,"entry_id"
-                          ,"p_0_3_um"
-                          ,"p_0_5_um"
-                          ,"p_1_0_um"
-                          ,"p_2_5_um"
-                          ,"p_5_0_um"
-                          ,"p_10_0_um"
-                          ,"p1_0_cf_1"
-                          ,"p10_0_cf_1")
-  
-  #channel B field names
-  primary_fields_b <- c("created_at"
-                        ,"entry_id"
-                        ,"pm1_0_atm"
-                        ,"pm2_5_atm"
-                        ,"pm10_0_atm"
-                        ,"free_heap_memory"
-                        ,"analog_input"
-                        ,"sensor_firmware_pressure"
-                        ,"not_used"
-                        ,"pm2_5_cf_1")
-  
-  secondary_fields_b <- c("created_at"
-                          ,"entry_id"
-                          ,"p_0_3_um"
-                          ,"p_0_5_um"
-                          ,"p_1_0_um"
-                          ,"p_2_5_um"
-                          ,"p_5_0_um"
-                          ,"p_10_0_um"
-                          ,"pm1_0_cf_1"
-                          ,"pm10_0_cf_1")
-  
-  # A and B sensors provide different fields!
-  if (!is.na(row$ParentID)) {
+                          ,"pm1_0_atm"
+                          ,"pm2_5_atm"
+                          ,"pm10_0_atm"
+                          ,"free_heap_memory"
+                          ,"analog_input"
+                          ,"sensor_firmware_pressure"
+                          ,"not_used"
+                          ,"pm2_5_cf_1")
     
-    # assign A field names
-    primary_df <- primary_request$feeds
-    colnames(primary_df) <-primary_fields_a
+    secondary_fields_b <- c("created_at"
+                            ,"entry_id"
+                            ,"p_0_3_um"
+                            ,"p_0_5_um"
+                            ,"p_1_0_um"
+                            ,"p_2_5_um"
+                            ,"p_5_0_um"
+                            ,"p_10_0_um"
+                            ,"pm1_0_cf_1"
+                            ,"pm10_0_cf_1")
     
-    secondary_df <- secondary_request$feeds
-    colnames(secondary_df) <- secondary_fields_a
+    # A and B sensors provide different fields!
+    if (!is.na(row$ParentID)) {
+      
+      # assign A field names
+      primary_df <- primary_request$feeds
+      colnames(primary_df) <-primary_fields_a
+      
+      secondary_df <- secondary_request$feeds
+      colnames(secondary_df) <- secondary_fields_a
+      
+      
+    } else {
+      
+      # assign B field names
+      primary_df <- primary_request$feeds
+      colnames(primary_df) <-primary_fields_b
+      
+      secondary_df <- secondary_request$feeds
+      colnames(secondary_df) <- secondary_fields_b
+      
+    }
     
+    df <- full_join(primary_df, secondary_df)
     
-  } else {
+    # convert to tidy dataframe (needed for bind_rows when making weekly requests)
+    tidy_df <- df %>% gather(field, value, -c(created_at, entry_id))
     
-    # assign B field names
-    primary_df <- primary_request$feeds
-    colnames(primary_df) <-primary_fields_b
-    
-    secondary_df <- secondary_request$feeds
-    colnames(secondary_df) <- secondary_fields_b
+    # bind single week to total requests
+    output_df <- rbind(tidy_df)
     
   }
-
-  df <- full_join(primary_df, secondary_df)
   
-  
-  return(df)
-  
+  return(output_df)
   
 }
 
 
 # for testing purposes
 row <- pa_sf[1,]
-df <- thingspeak_collect(row, "2017-05-14", "2018-05-21")
+df <- thingspeak_read(row, "2017-05-14", "2018-05-21")
 
 # apply our read function across each row of our pa_sf df
 apply(pa_sf
       ,MARGIN = 1 # applies over rows
       ,FUN = thingspeak_collect
       )
+
+thingspeak_collect(row, "2018-05-07", "2018-05-14")
 
