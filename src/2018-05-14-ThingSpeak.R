@@ -40,7 +40,7 @@ p_load(readr
 )
 
 
-# geography projection
+# CRS
 wgs_84 <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs "
 
 # Sacramento, CA, UTM 10S, meters
@@ -81,12 +81,12 @@ pa_sf <- pa_sf[pdx, ]
 
 
 
-
+# create function to collect purpleair data 8000 rows at a time
 thingspeak_collect <- function(row, start="2016-05-15", end="2018-05-15") {
   
   # RDS file path
-  output_path <- paste0("./data/output/", format(Sys.time(), "%Y-%m-%d"), "-thingspeak.RDS")
-  con <- file(output_path)
+  #output_path <- paste0("./data/output/", format(Sys.time(), "%Y-%m-%d"), "-thingspeak.txt")
+  #con <- file(output_path)
   
   # primary api id and key pairs
   primary_id <- row$THINGSPEAK_PRIMARY_ID
@@ -232,38 +232,17 @@ thingspeak_collect <- function(row, start="2016-05-15", end="2018-05-15") {
       tidy_df <- df %>% gather(field, value, -c(created_at, entry_id))
       
       # bind single week to total requests
-      #output_df <- rbind(tidy_df, output_df) # takes up too much RAM in the long run...
-      output_df <- rbind(tidy_df) # work with legacy code below
-      
-      # create RDS file
-      if(!file.exists(output_path)) {
-        
-        # connection not needed when creating file
-        saveRDS(output_df, output_path)
-        
-      } else {
-        
-        while(isOpen(con)) { # untested but something of this nature should work
-          sys.Sleep(2)
-        }
-        
-        open(con)
-        df_old <- readRDS(con)
-        df_new <- rbind(df_old, output_df)
-        saveRDS(df_new, con)
-        close(con)
-        
-      }
-      
+      output_df <- rbind(tidy_df, output_df) # takes up too much RAM in the long run...
+      #output_df <- rbind(tidy_df) # work with legacy code below
       
     }
       
       
     }
     
-
+  # testing this out real quick...
+  #saveRDS(output_df, output_path)
   return(output_df)
-  
 }
 
 
