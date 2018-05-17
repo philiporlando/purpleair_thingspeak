@@ -36,6 +36,7 @@ p_load(readr
        ,httr
        ,jsonlite
        ,lubridate
+       ,rstan # for save/readRDS error?
 )
 
 
@@ -237,11 +238,14 @@ thingspeak_collect <- function(row, start="2016-05-15", end="2018-05-15") {
       # create RDS file
       if(!file.exists(output_path)) {
         
-        open(con)
-        saveRDS(output_df, con)
-        close(con)
+        # connection not needed when creating file
+        saveRDS(output_df, output_path)
         
       } else {
+        
+        while(isOpen(con)) { # untested but something of this nature should work
+          sys.Sleep(2)
+        }
         
         open(con)
         df_old <- readRDS(con)
