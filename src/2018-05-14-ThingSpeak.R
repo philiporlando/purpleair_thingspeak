@@ -37,6 +37,7 @@ p_load(readr
        ,jsonlite
        ,lubridate
        ,rstan # for save/readRDS error?
+       ,feather
 )
 
 
@@ -274,3 +275,7 @@ df <- apply(pa_sf
       ,FUN = thingspeak_collect
       )
 
+
+feather_write(df, "./output/2018-05-16-output.feather")
+saveRDS(df, "./output/2018-05-16-output.RDS")
+write.csv(df, "./output/2018-05-16-output.csv")
