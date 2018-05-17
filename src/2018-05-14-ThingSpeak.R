@@ -81,7 +81,7 @@ pa_sf <- pa_sf[pdx, ]
 
 
 
-thingspeak_collect <- function(row, start, end) {
+thingspeak_collect <- function(row, start="2018-05-07", end="2018-05-14") {
   
   # max request length is 8000
   
@@ -143,99 +143,109 @@ thingspeak_collect <- function(row, start, end) {
                             ,"%2000:00:00")
     
     
-    # this needs exception handling!
-    primary_request <- fromJSON(primary_url)
-    secondary_request <- fromJSON(secondary_url)
+    # request api with exception handling
+    try(primary_request <- fromJSON(primary_url))
+    try(secondary_request <- fromJSON(secondary_url))
     
-    # channel A field names
-    primary_fields_a <- c("created_at"
-                          ,"entry _id"
-                          ,"pm1_0_atm"
-                          ,"pm2_5_atm"
-                          ,"pm10_0_atm"
-                          ,"uptime_min"
-                          ,"rssi_wifi_strength"
-                          ,"temp_f"
-                          ,"humidity"
-                          ,"pm2_5_cf_1")
-    
-    secondary_fields_a <- c("created_at"
-                            ,"entry_id"
-                            ,"p_0_3_um"
-                            ,"p_0_5_um"
-                            ,"p_1_0_um"
-                            ,"p_2_5_um"
-                            ,"p_5_0_um"
-                            ,"p_10_0_um"
-                            ,"p1_0_cf_1"
-                            ,"p10_0_cf_1")
-    
-    #channel B field names
-    primary_fields_b <- c("created_at"
-                          ,"entry_id"
-                          ,"pm1_0_atm"
-                          ,"pm2_5_atm"
-                          ,"pm10_0_atm"
-                          ,"free_heap_memory"
-                          ,"analog_input"
-                          ,"sensor_firmware_pressure"
-                          ,"not_used"
-                          ,"pm2_5_cf_1")
-    
-    secondary_fields_b <- c("created_at"
-                            ,"entry_id"
-                            ,"p_0_3_um"
-                            ,"p_0_5_um"
-                            ,"p_1_0_um"
-                            ,"p_2_5_um"
-                            ,"p_5_0_um"
-                            ,"p_10_0_um"
-                            ,"pm1_0_cf_1"
-                            ,"pm10_0_cf_1")
-    
-    # A and B sensors provide different fields!
-    if (!is.na(row$ParentID)) {
-      
-      # assign A field names
-      primary_df <- primary_request$feeds
-      colnames(primary_df) <-primary_fields_a
-      
-      secondary_df <- secondary_request$feeds
-      colnames(secondary_df) <- secondary_fields_a
-      
+    # break if request is NULL
+    if (is_empty(primary_request$feeds) | is_empty(secondary_request$feeds)) {
+      print(paste0(primary_request$channel$created_at, " ",primary_request$channel$name, " is empty, skipping..."))
+      #break
       
     } else {
       
-      # assign B field names
-      primary_df <- primary_request$feeds
-      colnames(primary_df) <-primary_fields_b
       
-      secondary_df <- secondary_request$feeds
-      colnames(secondary_df) <- secondary_fields_b
+      # channel A field names
+      primary_fields_a <- c("created_at"
+                            ,"entry _id"
+                            ,"pm1_0_atm"
+                            ,"pm2_5_atm"
+                            ,"pm10_0_atm"
+                            ,"uptime_min"
+                            ,"rssi_wifi_strength"
+                            ,"temp_f"
+                            ,"humidity"
+                            ,"pm2_5_cf_1")
+      
+      secondary_fields_a <- c("created_at"
+                              ,"entry_id"
+                              ,"p_0_3_um"
+                              ,"p_0_5_um"
+                              ,"p_1_0_um"
+                              ,"p_2_5_um"
+                              ,"p_5_0_um"
+                              ,"p_10_0_um"
+                              ,"p1_0_cf_1"
+                              ,"p10_0_cf_1")
+      
+      #channel B field names
+      primary_fields_b <- c("created_at"
+                            ,"entry_id"
+                            ,"pm1_0_atm"
+                            ,"pm2_5_atm"
+                            ,"pm10_0_atm"
+                            ,"free_heap_memory"
+                            ,"analog_input"
+                            ,"sensor_firmware_pressure"
+                            ,"not_used"
+                            ,"pm2_5_cf_1")
+      
+      secondary_fields_b <- c("created_at"
+                              ,"entry_id"
+                              ,"p_0_3_um"
+                              ,"p_0_5_um"
+                              ,"p_1_0_um"
+                              ,"p_2_5_um"
+                              ,"p_5_0_um"
+                              ,"p_10_0_um"
+                              ,"pm1_0_cf_1"
+                              ,"pm10_0_cf_1")
+      
+      # A and B sensors provide different fields!
+      if (!is.na(row$ParentID)) {
+        
+        # assign A field names
+        primary_df <- primary_request$feeds
+        colnames(primary_df) <- primary_fields_a
+        
+        secondary_df <- secondary_request$feeds
+        colnames(secondary_df) <- secondary_fields_a
+        
+        
+      } else {
+        
+        # assign B field names
+        primary_df <- primary_request$feeds
+        colnames(primary_df) <-primary_fields_b
+        
+        secondary_df <- secondary_request$feeds
+        colnames(secondary_df) <- secondary_fields_b
+        
+      }
+      
+      df <- full_join(primary_df, secondary_df)
+      
+      # convert to tidy dataframe (needed for bind_rows when making weekly requests)
+      tidy_df <- df %>% gather(field, value, -c(created_at, entry_id))
+      
+      # bind single week to total requests
+      output_df <- rbind(tidy_df)
+      
+    }
+      
       
     }
     
-    df <- full_join(primary_df, secondary_df)
-    
-    # convert to tidy dataframe (needed for bind_rows when making weekly requests)
-    tidy_df <- df %>% gather(field, value, -c(created_at, entry_id))
-    
-    # bind single week to total requests
-    output_df <- rbind(tidy_df)
-    
-  }
-  
+
   return(output_df)
   
 }
 
 
 # for testing purposes
-row <- pa_sf[1,]
+test <- pa_sf[1,]
 
-df <- thingspeak_collect(row, "2018-05-07", "2018-05-14")
-
-
+df <- thingspeak_collect(test, "2017-05-14", "2018-05-14")
 
 # apply our read function across each row of our pa_sf df
 apply(pa_sf
