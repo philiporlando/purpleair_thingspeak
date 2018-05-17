@@ -80,10 +80,18 @@ pa_sf <- st_transform(pa_sf, crs = st_crs(pdx))
 pa_sf <- pa_sf[pdx, ]
 
 
+# Sensor A testing
+#row <- pa_sf[1,]
 
+# Sensor B testing
+#row <- pa_sf[2,]
 
 # create function to collect purpleair data 8000 rows at a time
 thingspeak_collect <- function(row, start="2016-05-15", end="2018-05-15") {
+  
+  # for testing
+  #start_date <- "2018-05-07"
+  #end_date <- "2018-05-14"
   
   # file path
   output_path <- paste0("./data/output/", format(Sys.time(), "%Y-%m-%d"), "-thingspeak.txt")
@@ -162,7 +170,7 @@ thingspeak_collect <- function(row, start="2016-05-15", end="2018-05-15") {
       
       # channel A field names
       primary_fields_a <- c("created_at"
-                            ,"entry _id"
+                            ,"entry_id"
                             ,"pm1_0_atm"
                             ,"pm2_5_atm"
                             ,"pm10_0_atm"
@@ -207,7 +215,7 @@ thingspeak_collect <- function(row, start="2016-05-15", end="2018-05-15") {
                               ,"pm10_0_cf_1")
       
       # A and B sensors provide different fields!
-      if (!is.na(row$ParentID)) {
+      if (is.na(row$ParentID)) {
         
         # assign A field names
         primary_df <- primary_request$feeds
@@ -228,10 +236,40 @@ thingspeak_collect <- function(row, start="2016-05-15", end="2018-05-15") {
         
       }
       
-      df <- full_join(primary_df, secondary_df)
+      # attach PurpleAir API attributes to thingspeak data
+      primary_df$Label <- row$Label
+      primary_df$ID <- row$ID
+      primary_df$DEVICE_LOCATIONTYPE <- row$DEVICE_LOCATIONTYPE
+      primary_df$geometry <- row$geometry
       
+      secondary_df$Label <- row$Label
+      secondary_df$ID <- row$ID
+      secondary_df$DEVICE_LOCATIONTYPE <- row$DEVICE_LOCATIONTYPE
+      secondary_df$geometry <- row$geometry
+      
+      # these are different depending on which request is being made (primary/secondary)
+      #primary_df$THINGSPEAK_PRIMARY_ID
+      
+      # filter out indoor purpleair data
+      primary_df <- primary_df %>% filter(DEVICE_LOCATIONTYPE == "outside")
+      primary_df <- primary_df %>% dplyr::select(-DEVICE_LOCATIONTYPE) # threw error without dplyr::
+      
+      secondary_df <- secondary_df %>% filter(DEVICE_LOCATIONTYPE == "outside")
+      secondary_df <- secondary_df %>% dplyr::select(-DEVICE_LOCATIONTYPE) # thre error without dplyr::
+      
+      # convert to tidy data
+      primary_df <- primary_df %>% gather(field, value, -c(created_at, entry_id, Label, ID, geometry))
+      secondary_df <- secondary_df %>% gather(field, value, -c(created_at, entry_id, Label, ID, geometry))
+      
+      # combine primary and secondary data into single tidy df
+      tidy_df <- rbind(primary_df, secondary_df)
+      
+      
+      # join is inefficient!
+      #df <- full_join(primary_df, secondary_df)
+    
       # convert to tidy dataframe (needed for bind_rows when making weekly requests)
-      tidy_df <- df %>% gather(field, value, -c(created_at, entry_id))
+      #tidy_df <- df %>% gather(field, value, -c(created_at, entry_id))
       
       # bind single week to total requests
       output_df <- rbind(tidy_df, output_df) # takes up too much RAM in the long run...
@@ -270,12 +308,12 @@ thingspeak_collect <- function(row, start="2016-05-15", end="2018-05-15") {
 test <- pa_sf[1,]
 
 # apply our read function across each row of our pa_sf df
-df <- apply(pa_sf
+df <- ddply(pa_sf
       ,MARGIN = 1 # applies over rows
       ,FUN = thingspeak_collect
       )
 
 
-feather_write(df, "./output/2018-05-16-output.feather")
+write_feather(as.data.frame(df), "./output/2018-05-16-output.feather")
 saveRDS(df, "./output/2018-05-16-output.RDS")
 write.csv(df, "./output/2018-05-16-output.csv")
