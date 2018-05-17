@@ -84,9 +84,10 @@ pa_sf <- pa_sf[pdx, ]
 # create function to collect purpleair data 8000 rows at a time
 thingspeak_collect <- function(row, start="2016-05-15", end="2018-05-15") {
   
-  # RDS file path
-  #output_path <- paste0("./data/output/", format(Sys.time(), "%Y-%m-%d"), "-thingspeak.txt")
+  # file path
+  output_path <- paste0("./data/output/", format(Sys.time(), "%Y-%m-%d"), "-thingspeak.txt")
   #con <- file(output_path)
+  
   
   # primary api id and key pairs
   primary_id <- row$THINGSPEAK_PRIMARY_ID
@@ -152,7 +153,7 @@ thingspeak_collect <- function(row, start="2016-05-15", end="2018-05-15") {
     
     # break if request is NULL
     if (is_empty(primary_request$feeds) | is_empty(secondary_request$feeds)) {
-      print(paste0(start_date, "-", end_date, " ", row$Label, " is empty, skipping..."))
+      print(paste0(start_date, "-", end_date, " ", row$Label, " is empty..."))
       #break
       
     } else {
@@ -242,7 +243,25 @@ thingspeak_collect <- function(row, start="2016-05-15", end="2018-05-15") {
     
   # testing this out real quick...
   #saveRDS(output_df, output_path)
-  return(output_df)
+  #return(output_df)
+  
+  if(!exists(output_path)) {
+    
+    write.table(output_df
+                ,output_path
+                ,row.names = FALSE
+                ,col.names = TRUE)
+    
+  } else {
+    
+    write.table(output_df
+                ,output_path
+                ,row.names = FALSE
+                ,append = TRUE)
+    
+  }
+
+
 }
 
 
