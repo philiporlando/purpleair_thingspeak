@@ -81,9 +81,11 @@ pa_sf <- pa_sf[pdx, ]
 
 
 
-thingspeak_collect <- function(row, start="2018-05-07", end="2018-05-14") {
+thingspeak_collect <- function(row, start="2016-05-15", end="2018-05-15") {
   
-  # max request length is 8000
+  # RDS file path
+  output_path <- paste0("./data/output/", format(Sys.time(), "%Y-%m-%d"), "-thingspeak.RDS")
+  con <- file(output_path)
   
   # primary api id and key pairs
   primary_id <- row$THINGSPEAK_PRIMARY_ID
@@ -149,7 +151,7 @@ thingspeak_collect <- function(row, start="2018-05-07", end="2018-05-14") {
     
     # break if request is NULL
     if (is_empty(primary_request$feeds) | is_empty(secondary_request$feeds)) {
-      print(paste0(primary_request$channel$created_at, " ",primary_request$channel$name, " is empty, skipping..."))
+      print(paste0(start_date, "-", end_date, " ", row$Label, " is empty, skipping..."))
       #break
       
     } else {
@@ -229,7 +231,26 @@ thingspeak_collect <- function(row, start="2018-05-07", end="2018-05-14") {
       tidy_df <- df %>% gather(field, value, -c(created_at, entry_id))
       
       # bind single week to total requests
-      output_df <- rbind(tidy_df)
+      #output_df <- rbind(tidy_df, output_df) # takes up too much RAM in the long run...
+      output_df <- rbind(tidy_df) # work with legacy code below
+      
+      # create RDS file
+      if(!file.exists(output_path)) {
+        
+        open(con)
+        saveRDS(output_df, con)
+        close(con)
+        
+      } else {
+        
+        open(con)
+        df_old <- readRDS(con)
+        df_new <- rbind(df_old, output_df)
+        saveRDS(df_new, con)
+        close(con)
+        
+      }
+      
       
     }
       
@@ -245,10 +266,8 @@ thingspeak_collect <- function(row, start="2018-05-07", end="2018-05-14") {
 # for testing purposes
 test <- pa_sf[1,]
 
-df <- thingspeak_collect(test, "2017-05-14", "2018-05-14")
-
 # apply our read function across each row of our pa_sf df
-apply(pa_sf
+df <- apply(pa_sf
       ,MARGIN = 1 # applies over rows
       ,FUN = thingspeak_collect
       )
