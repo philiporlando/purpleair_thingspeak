@@ -16,7 +16,7 @@ PurpleAir relies on a [Thingspeak API](https://thingspeak.com/) to store all of 
 Since PurpleAir sensors upload data every 120 seconds, this equates to a maximum of about a week's worth of data per request. This is simply not good enough for the months-years worth of data that I'm looking for! 
 My R function `thingspeak_collect()` retrieves ALL of the historical data for each sensor in Portland, OR based on a user defined start and end date. 
 I relied on the [split-apply-combine](https://www.jstatsoft.org/article/view/v040i01) strategy to break up the desired range of historical data into chunks of 8000 observations. 
-I then employed the principles of [tidy data](https://vita.had.co.nz/papers/tidy-data.pdf) to combine everything into a convenieent format for further analysis!
+I then employed the principles of [tidy data](https://vita.had.co.nz/papers/tidy-data.pdf) to combine everything into a convenient format for future analysis!
 
 
 
