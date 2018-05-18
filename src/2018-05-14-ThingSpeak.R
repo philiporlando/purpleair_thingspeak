@@ -84,7 +84,7 @@ pa_sf <- pa_sf[pdx, ]
 #row <- pa_sf[1,]
 
 # Sensor B testing
-#row <- pa_sf[2,]
+#row <- pa_sf[4,]
 
 # create function to collect purpleair data 8000 rows at a time
 thingspeak_collect <- function(row, start="2016-05-15", end="2018-05-15") {
@@ -220,46 +220,79 @@ thingspeak_collect <- function(row, start="2016-05-15", end="2018-05-15") {
         # assign A field names
         primary_df <- primary_request$feeds
         colnames(primary_df) <- primary_fields_a
+        primary_df$sensor <- "A"
         
         secondary_df <- secondary_request$feeds
         colnames(secondary_df) <- secondary_fields_a
-        
+        secondary_df$sensor <- "A"
         
       } else {
         
         # assign B field names
         primary_df <- primary_request$feeds
         colnames(primary_df) <-primary_fields_b
+        primary_df$sensor <- "B"
         
         secondary_df <- secondary_request$feeds
         colnames(secondary_df) <- secondary_fields_b
+        secondary_df$sensor <- "B"
         
       }
       
-      # attach PurpleAir API attributes to thingspeak data
-      primary_df$Label <- row$Label
-      primary_df$ID <- row$ID
-      primary_df$DEVICE_LOCATIONTYPE <- row$DEVICE_LOCATIONTYPE
-      primary_df$geometry <- row$geometry
       
-      secondary_df$Label <- row$Label
-      secondary_df$ID <- row$ID
-      secondary_df$DEVICE_LOCATIONTYPE <- row$DEVICE_LOCATIONTYPE
-      secondary_df$geometry <- row$geometry
+      if(row$DEVICE_LOCATIONTYPE == "") {
+        
+        # attach PurpleAir API attributes to primary thingspeak data
+        primary_df$Label <- row$Label
+        primary_df$ID <- row$ID
+        #primary_df$DEVICE_LOCATIONTYPE <- row$DEVICE_LOCATIONTYPE
+        primary_df$geometry <- row$geometry
+        
+        # attach PurpleAir API attributes to secondary thingspeak data
+        secondary_df$Label <- row$Label
+        secondary_df$ID <- row$ID
+        #secondary_df$DEVICE_LOCATIONTYPE <- row$DEVICE_LOCATIONTYPE
+        secondary_df$geometry <- row$geometry
+        
+      } else {
+        
+        # attach PurpleAir API attributes to primary thingspeak data
+        primary_df$Label <- row$Label
+        primary_df$ID <- row$ID
+        primary_df$DEVICE_LOCATIONTYPE <- row$DEVICE_LOCATIONTYPE
+        primary_df$geometry <- row$geometry
+        
+        # attach PurpleAir API attributes to secondary thingspeak data
+        secondary_df$Label <- row$Label
+        secondary_df$ID <- row$ID
+        secondary_df$DEVICE_LOCATIONTYPE <- row$DEVICE_LOCATIONTYPE
+        secondary_df$geometry <- row$geometry
+        
+        # these are different depending on which request is being made (primary/secondary)
+        #primary_df$THINGSPEAK_PRIMARY_ID # not needed...
+        
+        # filter out indoor purpleair data
+        primary_df <- primary_df %>% filter(DEVICE_LOCATIONTYPE == "outside")
+        primary_df <- primary_df %>% dplyr::select(-DEVICE_LOCATIONTYPE) # threw error without dplyr::
+        
+        secondary_df <- secondary_df %>% filter(DEVICE_LOCATIONTYPE == "outside")
+        secondary_df <- secondary_df %>% dplyr::select(-DEVICE_LOCATIONTYPE) # thre error without dplyr::
+        
+        
+      }
       
-      # these are different depending on which request is being made (primary/secondary)
-      #primary_df$THINGSPEAK_PRIMARY_ID
+
+      # remove NA field "not_used"
+      if("not_used" %in% colnames(primary_df)) {
+        
+        primary_df <- primary_df %>% dplyr::select(-not_used)
+        
+      }
       
-      # filter out indoor purpleair data
-      primary_df <- primary_df %>% filter(DEVICE_LOCATIONTYPE == "outside")
-      primary_df <- primary_df %>% dplyr::select(-DEVICE_LOCATIONTYPE) # threw error without dplyr::
-      
-      secondary_df <- secondary_df %>% filter(DEVICE_LOCATIONTYPE == "outside")
-      secondary_df <- secondary_df %>% dplyr::select(-DEVICE_LOCATIONTYPE) # thre error without dplyr::
-      
+
       # convert to tidy data
-      primary_df <- primary_df %>% gather(field, value, -c(created_at, entry_id, Label, ID, geometry))
-      secondary_df <- secondary_df %>% gather(field, value, -c(created_at, entry_id, Label, ID, geometry))
+      primary_df <- primary_df %>% gather(field, value, -c(created_at, entry_id, Label, ID, sensor, geometry))
+      secondary_df <- secondary_df %>% gather(field, value, -c(created_at, entry_id, Label, ID, sensor, geometry))
       
       # combine primary and secondary data into single tidy df
       tidy_df <- rbind(primary_df, secondary_df)
@@ -305,7 +338,11 @@ thingspeak_collect <- function(row, start="2016-05-15", end="2018-05-15") {
 
 
 # for testing purposes
-test <- pa_sf[1,]
+# test <- pa_sf[1,]
+# df <- ddply(pa_sf
+#             ,MARGIN = 1
+#             ,FUN = thingspeak_collect)
+
 
 # apply our read function across each row of our pa_sf df
 df <- ddply(pa_sf
@@ -314,6 +351,6 @@ df <- ddply(pa_sf
       )
 
 
-write_feather(as.data.frame(df), "./output/2018-05-16-output.feather")
+write_feather(df, "./output/2018-05-16-output.feather")
 saveRDS(df, "./output/2018-05-16-output.RDS")
 write.csv(df, "./output/2018-05-16-output.csv")
