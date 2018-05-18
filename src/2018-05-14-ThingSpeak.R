@@ -416,9 +416,9 @@ thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
       # fix to append feather without writing over...
       if(!file.exists(feather_path)) {
         
-        invisible(write_feather(output_df
+        write_feather(output_df
                       ,feather_path
-        ))
+        )
         
         print("test point 16")
         
@@ -427,9 +427,9 @@ thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
         old_feather <- read_feather(feather_path)
         new_feather <- rbind(old_feather, output_df)
         
-        invisible(write_feather(new_feather
+        write_feather(new_feather
                       ,feather_path
-        ))
+        )
         
         print("test point 17")
         
@@ -452,10 +452,10 @@ test <- pa_sf[1:2,]
 
 # this will append data that already exists within the files...
 # figure out how to append intelligently... only add distinct values to file/db in future!
-apply(test
+invisible(apply(test
       ,MARGIN = 1
       ,FUN = thingspeak_collect
-      )
+      ))
 
 
 # apply our read function across each row of our pa_sf df
