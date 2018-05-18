@@ -404,7 +404,7 @@ thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
       # fix to append RDS without writing over...
       if(!file.exists(RDS_path)) {
 
-        print(paste0("Appending file: ", RDS_path))
+        print(paste0("Creating file: ", RDS_path))
         saveRDS(output_df
                     ,file = RDS_path
                     ,ascii = FALSE
