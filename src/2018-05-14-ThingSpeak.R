@@ -39,7 +39,19 @@ p_load(readr
        ,rstan # for save/readRDS error?
        ,feather
        ,snow #parallel computing
+       ,devtools
+       ,rJython
+       ,rJava
+       ,rjson
 )
+
+
+# for R texting 
+install_github("trinker/gmailR")
+install_github("kbroman/mygmailR")
+library(mygmailR)
+
+
 
 
 # CRS
@@ -470,6 +482,9 @@ invisible(apply(pa_sf
       ,MARGIN = 1 # applies over rows
       ,FUN = thingspeak_collect
       ))
+
+
+send_text("sent from R", "Your R process is done.")
 
 
 ## room for parallelization!
