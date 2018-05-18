@@ -368,7 +368,7 @@ thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
   #return(output_df)
   
   # upgrade to saveRDS or write_feather later?
-  if(!exists(txt_path)) {
+  if(!file.exists(txt_path)) {
     
     write.table(output_df
                 ,txt_path
@@ -390,7 +390,7 @@ thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
 
 
   # fix to append RDS without writing over...
-  if(!exists(RDS_path)) {
+  if(!file.exists(RDS_path)) {
     
     saveRDS(output_df
                 ,file = RDS_path
@@ -403,10 +403,10 @@ thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
   } else {
     
     
-    old_df <- readRDS(RDS_path)
-    new_df <- rbind(old_df, output_df)
+    old_RDS <- readRDS(RDS_path)
+    new_RDS <- rbind(old_RDS, output_df)
     
-    write.table(new_df
+    write.table(new_RDS
                 ,file = RDS_path
                 ,ascii = FALSE
                 ,compress = TRUE # append if already exists
@@ -418,7 +418,7 @@ thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
   
   
   # fix to append feather without writing over...
-  if(!exists(feather_path)) {
+  if(!file.exists(feather_path)) {
 
     write_feather(output_df
             ,feather_path
@@ -428,10 +428,10 @@ thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
 
   } else {
 
-    old_df <- read_feather(feather_path)
-    new_df <- rbind(old_df, output_df)
+    old_feather <- read_feather(feather_path)
+    new_feather <- rbind(old_feather, output_df)
 
-    write_feather(new_df
+    write_feather(new_feather
                 ,feather_path
                 )
     
@@ -444,7 +444,7 @@ thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
 
 
 # for testing purposes
-test <- pa_sf[2,]
+test <- pa_sf[1,]
 
 apply(test
       ,MARGIN = 1
