@@ -358,94 +358,100 @@ thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
       # takes up too much RAM in the long run...
       #output_df <- rbind(tidy_df) # work with legacy code below
       
+      
+      # testing this out real quick...
+      #saveRDS(output_df, output_path)
+      #return(output_df)
+      
+      # # upgrade to saveRDS or write_feather later?
+      # if(!file.exists(txt_path)) {
+      #   
+      #   write.table(output_df
+      #               ,txt_path
+      #               ,row.names = FALSE
+      #               ,col.names = TRUE)
+      #   
+      #   print("test point 12")
+      #   
+      # } else {
+      #   
+      #   write.table(output_df
+      #               ,txt_path
+      #               ,row.names = FALSE
+      #               ,append = TRUE # append if already exists
+      #               ,col.names = FALSE) 
+      #   print("test point 13")
+      #   
+      # }
+      
+      
+      # # fix to append RDS without writing over...
+      # if(!file.exists(RDS_path)) {
+      #   
+      #   saveRDS(output_df
+      #               ,file = RDS_path
+      #               ,ascii = FALSE
+      #               ,compress = TRUE
+      #           )
+      #   
+      #   print("test point 14")
+      #   
+      # } else {
+      #   
+      #   
+      #   old_RDS <- readRDS(RDS_path)
+      #   new_RDS <- rbind(old_RDS, output_df)
+      #   
+      #   write.table(new_RDS
+      #               ,file = RDS_path
+      #               ,ascii = FALSE
+      #               ,compress = TRUE # append if already exists
+      #               )
+      #   
+      #   print("test point 15")
+      #   
+      # }
+      
+      
+      # fix to append feather without writing over...
+      if(!file.exists(feather_path)) {
+        
+        invisible(write_feather(output_df
+                      ,feather_path
+        ))
+        
+        print("test point 16")
+        
+      } else {
+        
+        old_feather <- read_feather(feather_path)
+        new_feather <- rbind(old_feather, output_df)
+        
+        invisible(write_feather(new_feather
+                      ,feather_path
+        ))
+        
+        print("test point 17")
+        
+      }
+      
+      
     }
       
       
     }
-    
-  # testing this out real quick...
-  #saveRDS(output_df, output_path)
-  #return(output_df)
   
-  # # upgrade to saveRDS or write_feather later?
-  # if(!file.exists(txt_path)) {
-  #   
-  #   write.table(output_df
-  #               ,txt_path
-  #               ,row.names = FALSE
-  #               ,col.names = TRUE)
-  #   
-  #   print("test point 12")
-  #   
-  # } else {
-  #   
-  #   write.table(output_df
-  #               ,txt_path
-  #               ,row.names = FALSE
-  #               ,append = TRUE # append if already exists
-  #               ,col.names = FALSE) 
-  #   print("test point 13")
-  #   
-  # }
+  # cleaning up  
+  invisible(gc())
 
-
-  # # fix to append RDS without writing over...
-  # if(!file.exists(RDS_path)) {
-  #   
-  #   saveRDS(output_df
-  #               ,file = RDS_path
-  #               ,ascii = FALSE
-  #               ,compress = TRUE
-  #           )
-  #   
-  #   print("test point 14")
-  #   
-  # } else {
-  #   
-  #   
-  #   old_RDS <- readRDS(RDS_path)
-  #   new_RDS <- rbind(old_RDS, output_df)
-  #   
-  #   write.table(new_RDS
-  #               ,file = RDS_path
-  #               ,ascii = FALSE
-  #               ,compress = TRUE # append if already exists
-  #               )
-  #   
-  #   print("test point 15")
-  #   
-  # }
-  
-  
-  # fix to append feather without writing over...
-  if(!file.exists(feather_path)) {
-
-    write_feather(output_df
-            ,feather_path
-    )
-
-    print("test point 16")
-
-  } else {
-
-    old_feather <- read_feather(feather_path)
-    new_feather <- rbind(old_feather, output_df)
-
-    write_feather(new_feather
-                ,feather_path
-                )
-    
-    print("test point 15")
-
-  }
-
-  
 }
 
 
 # for testing purposes
-test <- pa_sf[1,]
+test <- pa_sf[1:2,]
 
+# this will append data that already exists within the files...
+# figure out how to append intelligently... only add distinct values to file/db in future!
 apply(test
       ,MARGIN = 1
       ,FUN = thingspeak_collect
