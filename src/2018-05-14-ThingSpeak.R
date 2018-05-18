@@ -379,6 +379,8 @@ thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
       
       if(!file.exists(txt_path)) {
 
+        
+        print(paste0("Creating file: ", txt_path))
         write.table(output_df
                     ,txt_path
                     ,row.names = FALSE
@@ -388,6 +390,7 @@ thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
 
       } else {
 
+        print(paste0("Appending file: ", txt_path))
         write.table(output_df
                     ,txt_path
                     ,row.names = FALSE
