@@ -36,7 +36,7 @@ p_load(readr
        ,httr
        ,jsonlite
        ,lubridate
-       ,rstan # for save/readRDS error?
+       #,rstan # for save/readRDS error?
        ,feather
        ,snow #parallel computing
        #,devtools
