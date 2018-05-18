@@ -39,17 +39,17 @@ p_load(readr
        ,rstan # for save/readRDS error?
        ,feather
        ,snow #parallel computing
-       ,devtools
-       ,rJython
-       ,rJava
-       ,rjson
+       #,devtools
+       #,rJython
+       #,rJava
+       #,rjson
 )
 
 
 # for R texting 
-install_github("trinker/gmailR")
-install_github("kbroman/mygmailR")
-library(mygmailR)
+# install_github("trinker/gmailR")
+# install_github("kbroman/mygmailR")
+# library(mygmailR)
 
 
 
