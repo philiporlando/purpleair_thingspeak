@@ -100,7 +100,7 @@ pa_sf <- pa_sf[pdx, ]
 #row <- pa_sf[2,]
 
 # create function to collect purpleair data 8000 rows at a time
-thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
+thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-15") {
   
   # for testing
   #start_date <- "2018-05-07"
