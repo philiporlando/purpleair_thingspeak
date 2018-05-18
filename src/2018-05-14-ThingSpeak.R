@@ -400,63 +400,66 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-15") {
 
       }
       
+      # # reading in old_df is too expensive, exceeding 32GB!!!!
+      # #  Error in coldataFeather(x, i) : 
+      # #     embedded nul in string: '\0\0\0\0\t\0\0\0\022\0\0\0\033\0\0\0$\0\0\0-\0\0\0' 
       
-      # fix to append RDS without writing over...
-      if(!file.exists(RDS_path)) {
-
-        print(paste0("Creating file: ", basename(RDS_path)))
-        saveRDS(output_df
-                    ,file = RDS_path
-                    ,ascii = FALSE
-                    ,compress = TRUE
-                )
-
-        # #print("test point 14")
-
-      } else {
-
-        print(paste0("Appending file: ", basename(RDS_path)))
-
-
-        old_RDS <- readRDS(RDS_path)
-        new_RDS <- rbind(old_RDS, output_df)
-
-        saveRDS(new_RDS
-                    ,file = RDS_path
-                    ,ascii = FALSE
-                    ,compress = TRUE # append if already exists
-                    )
-
-        # #print("test point 15")
-
-      }
+      # # fix to append RDS without writing over...
+      # if(!file.exists(RDS_path)) {
+      # 
+      #   print(paste0("Creating file: ", basename(RDS_path)))
+      #   saveRDS(output_df
+      #               ,file = RDS_path
+      #               ,ascii = FALSE
+      #               ,compress = TRUE
+      #           )
+      # 
+      #   # #print("test point 14")
+      # 
+      # } else {
+      # 
+      #   print(paste0("Appending file: ", basename(RDS_path)))
+      # 
+      # 
+      #   old_RDS <- readRDS(RDS_path)
+      #   new_RDS <- rbind(old_RDS, output_df)
+      # 
+      #   saveRDS(new_RDS
+      #               ,file = RDS_path
+      #               ,ascii = FALSE
+      #               ,compress = TRUE # append if already exists
+      #               )
+      # 
+      #   # #print("test point 15")
+      # 
+      # }
       
       
-      # fix to append feather without writing over...
-      if(!file.exists(feather_path)) {
-        
-        print(paste0("Creating file: ", basename(feather_path)))
-        
-        write_feather(output_df
-                      ,feather_path
-        )
-        
-        #print("test point 16")
-        
-      } else {
-        
-        print(paste0("Appending file: ", basename(feather_path)))
-        
-        old_feather <- read_feather(feather_path)
-        new_feather <- rbind(old_feather, output_df)
-        
-        write_feather(new_feather
-                      ,feather_path
-        )
-        
-        #print("test point 17")
-        
-      }
+      # # fix to append feather without writing over...
+      # if(!file.exists(feather_path)) {
+      #   
+      #   print(paste0("Creating file: ", basename(feather_path)))
+      #   
+      #   write_feather(output_df
+      #                 ,feather_path
+      #   )
+      #   
+      #   #print("test point 16")
+      #   
+      # } else {
+      #   
+      #   print(paste0("Appending file: ", basename(feather_path)))
+      #   
+      #   old_feather <- read_feather(feather_path)
+      #   new_feather <- rbind(old_feather, output_df)
+      #   
+      #   write_feather(new_feather
+      #                 ,feather_path
+      #   )
+      #   
+      #   #print("test point 17")
+      #   
+      # }
       
       
     }
