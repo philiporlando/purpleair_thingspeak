@@ -380,7 +380,7 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-15") {
       if(!file.exists(txt_path)) {
 
         
-        print(paste0("Creating file: ", txt_path))
+        print(paste0("Creating file: ", basename(txt_path)))
         write.table(output_df
                     ,txt_path
                     ,row.names = FALSE
@@ -390,7 +390,7 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-15") {
 
       } else {
 
-        print(paste0("Appending file: ", txt_path))
+        print(paste0("Appending file: ", basename(txt_path)))
         write.table(output_df
                     ,txt_path
                     ,row.names = FALSE
@@ -404,7 +404,7 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-15") {
       # fix to append RDS without writing over...
       if(!file.exists(RDS_path)) {
 
-        print(paste0("Creating file: ", RDS_path))
+        print(paste0("Creating file: ", basename(RDS_path)))
         saveRDS(output_df
                     ,file = RDS_path
                     ,ascii = FALSE
@@ -415,7 +415,7 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-15") {
 
       } else {
 
-        print(paste0("Appending file: ", RDS_path))
+        print(paste0("Appending file: ", basename(RDS_path)))
 
 
         old_RDS <- readRDS(RDS_path)
@@ -435,7 +435,7 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-15") {
       # fix to append feather without writing over...
       if(!file.exists(feather_path)) {
         
-        print(paste0("Creating file: ", feather_path))
+        print(paste0("Creating file: ", basename(feather_path)))
         
         write_feather(output_df
                       ,feather_path
@@ -445,7 +445,7 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-15") {
         
       } else {
         
-        print(paste0("Appending file: ", feather_path))
+        print(paste0("Appending file: ", basename(feather_path)))
         
         old_feather <- read_feather(feather_path)
         new_feather <- rbind(old_feather, output_df)
