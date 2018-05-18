@@ -367,54 +367,54 @@ thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
   #saveRDS(output_df, output_path)
   #return(output_df)
   
-  # upgrade to saveRDS or write_feather later?
-  if(!file.exists(txt_path)) {
-    
-    write.table(output_df
-                ,txt_path
-                ,row.names = FALSE
-                ,col.names = TRUE)
-    
-    print("test point 12")
-    
-  } else {
-    
-    write.table(output_df
-                ,txt_path
-                ,row.names = FALSE
-                ,append = TRUE # append if already exists
-                ,col.names = FALSE) 
-    print("test point 13")
-    
-  }
+  # # upgrade to saveRDS or write_feather later?
+  # if(!file.exists(txt_path)) {
+  #   
+  #   write.table(output_df
+  #               ,txt_path
+  #               ,row.names = FALSE
+  #               ,col.names = TRUE)
+  #   
+  #   print("test point 12")
+  #   
+  # } else {
+  #   
+  #   write.table(output_df
+  #               ,txt_path
+  #               ,row.names = FALSE
+  #               ,append = TRUE # append if already exists
+  #               ,col.names = FALSE) 
+  #   print("test point 13")
+  #   
+  # }
 
 
-  # fix to append RDS without writing over...
-  if(!file.exists(RDS_path)) {
-    
-    saveRDS(output_df
-                ,file = RDS_path
-                ,ascii = FALSE
-                ,compress = TRUE
-            )
-    
-    print("test point 14")
-    
-  } else {
-    
-    
-    old_RDS <- readRDS(RDS_path)
-    new_RDS <- rbind(old_RDS, output_df)
-    
-    write.table(new_RDS
-                ,file = RDS_path
-                ,ascii = FALSE
-                ,compress = TRUE # append if already exists
-                )
-    
-    print("test point 15")
-    
-  }
+  # # fix to append RDS without writing over...
+  # if(!file.exists(RDS_path)) {
+  #   
+  #   saveRDS(output_df
+  #               ,file = RDS_path
+  #               ,ascii = FALSE
+  #               ,compress = TRUE
+  #           )
+  #   
+  #   print("test point 14")
+  #   
+  # } else {
+  #   
+  #   
+  #   old_RDS <- readRDS(RDS_path)
+  #   new_RDS <- rbind(old_RDS, output_df)
+  #   
+  #   write.table(new_RDS
+  #               ,file = RDS_path
+  #               ,ascii = FALSE
+  #               ,compress = TRUE # append if already exists
+  #               )
+  #   
+  #   print("test point 15")
+  #   
+  # }
   
   
   # fix to append feather without writing over...
@@ -453,33 +453,7 @@ apply(test
 
 
 # apply our read function across each row of our pa_sf df
-df <- apply(pa_sf
+apply(pa_sf
       ,MARGIN = 1 # applies over rows
       ,FUN = thingspeak_collect
       )
-
-
-
-# perhaps the better way to do this is periodically writing data to file within the loop
-# instead of trying to store everything into memory...
-
-# write our data to multiple formats for posterity
-write_feather(df
-              ,path = paste0("./data/output/"
-                             ,format(Sys.time()
-                                     ,"%Y-%m-%d")
-                             ,"-purpleair-thingspeak.feather"))
-
-saveRDS(df
-        ,file = paste0("./data/output/"
-                       ,format(Sys.time()
-                               ,"%Y-%m-%d")
-                       ,"-purpleair-thingspeak.RDS"))
-
-write.csv(df
-          ,file = paste0("./data/output/"
-                         ,format(Sys.time()
-                                 ,"%Y-%m-%d")
-                         ,"-purpleair-thingspeak.csv")
-          ,row.names = FALSE
-          ,col.names = TRUE)
