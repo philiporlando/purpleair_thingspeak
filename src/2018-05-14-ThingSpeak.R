@@ -106,6 +106,9 @@ thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
   secondary_id <- row$THINGSPEAK_SECONDARY_ID
   secondary_key <- row$THINGSPEAK_SECONDARY_ID_READ_KEY
   
+  # convert geometry to text for data wrangling
+  row$geometry <- st_as_text(row$geometry)
+  #row$geometry <- st_as_sfc(row$geometry) # converts back to geom
   
   # need to break up our entire request into 8000 length chunks...
   weeks <- seq(from = as.Date(start)
@@ -121,10 +124,10 @@ thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
                     ,"sensor"
                     ,"Label"
                     ,"ID"
-                    #,"geometry"
+                    ,"geometry"
                     ,"field"
                     ,"value"
-                    ,"geometry"
+                    #,"geometry"
                     )  
   
   # create empty dataframe to store all of our api request results
@@ -260,7 +263,7 @@ thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
         primary_df$Label <- row$Label
         primary_df$ID <- row$ID
         #primary_df$DEVICE_LOCATIONTYPE <- row$DEVICE_LOCATIONTYPE
-        #primary_df$geometry <- row$geometry
+        primary_df$geometry <- row$geometry
         print("test point 1")
         
         
@@ -268,7 +271,7 @@ thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
         secondary_df$Label <- row$Label
         secondary_df$ID <- row$ID
         #secondary_df$DEVICE_LOCATIONTYPE <- row$DEVICE_LOCATIONTYPE
-        #secondary_df$geometry <- row$geometry
+        secondary_df$geometry <- row$geometry
         print("test point 2")
         
       } else {
@@ -277,7 +280,7 @@ thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
         primary_df$Label <- row$Label
         primary_df$ID <- row$ID
         primary_df$DEVICE_LOCATIONTYPE <- row$DEVICE_LOCATIONTYPE
-        #primary_df$geometry <- row$geometry
+        primary_df$geometry <- row$geometry
         print("test point 3")
         
         
@@ -285,7 +288,7 @@ thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
         secondary_df$Label <- row$Label
         secondary_df$ID <- row$ID
         secondary_df$DEVICE_LOCATIONTYPE <- row$DEVICE_LOCATIONTYPE
-        #secondary_df$geometry <- row$geometry
+        secondary_df$geometry <- row$geometry
         print("test point 4")
         
         # these are different depending on which request is being made (primary/secondary)
@@ -319,7 +322,7 @@ thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
                                               ,Label
                                               ,ID
                                               ,sensor
-                                              #,geometry
+                                              ,geometry
                                               )
                                           )
       print("test point 8")
@@ -330,13 +333,13 @@ thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
                                                   ,Label
                                                   ,ID
                                                   ,sensor
-                                                  #,geometry
+                                                  ,geometry
                                                   )
                                               )
       print("test point 9")
       # combine primary and secondary data into single tidy df
       tidy_df <- rbind(primary_df, secondary_df)
-      tidy_df$geometry <- row$geometry # trying to manipulate geom differently
+      #tidy_df$geometry <- row$geometry # trying to manipulate geom differently
       print("test point 10")
       
       # join is inefficient!
@@ -393,10 +396,10 @@ df <- as.data.frame(apply(test
 
 
 # apply our read function across each row of our pa_sf df
-df <- plyr::ddply(pa_sf
+df <- st_as_sf(apply(pa_sf
       ,MARGIN = 1 # applies over rows
       ,FUN = thingspeak_collect
-      )
+      ))
 
 # rrite our data to multiple formats for posterity
 write_feather(df
