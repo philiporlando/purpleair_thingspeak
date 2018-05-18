@@ -139,6 +139,13 @@ thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
     start_date <- weeks$date[i]
     end_date <- weeks$date[i+1]
     
+    # if the end data is in the future, then use the current date as the final end point
+    if (is.na(end_date)) {
+      
+      end_date <- Sys.Date()
+      
+    }
+    
     # primary url to pull from api
     primary_url <- paste0("https://api.thingspeak.com/channels/"
                           ,primary_id
