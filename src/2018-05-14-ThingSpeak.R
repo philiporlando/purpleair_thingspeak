@@ -483,9 +483,9 @@ invisible(apply(pa_sf
       ,FUN = thingspeak_collect
       ))
 
-
-#send_text("sent from R", "Your R process is done.")
-send_gmail("sent from R", "Your R process is done.")
+# broken on linux... error in jython.exec(rJython, mail) : (-1, 'SSL exception')
+# send_text("sent from R", "Your R process is done.")
+# send_gmail("sent from R", "Your R process is done.")
 
 ## room for parallelization!
 
