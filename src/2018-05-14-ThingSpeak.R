@@ -484,8 +484,8 @@ invisible(apply(pa_sf
       ))
 
 
-send_text("sent from R", "Your R process is done.")
-
+#send_text("sent from R", "Your R process is done.")
+send_gmail("sent from R", "Your R process is done.")
 
 ## room for parallelization!
 
