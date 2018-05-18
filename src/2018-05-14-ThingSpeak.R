@@ -388,6 +388,7 @@ thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
       # # fix to append RDS without writing over...
       # if(!file.exists(RDS_path)) {
       #   
+      #   print(paste0("Appending file: ", RDS_path))
       #   saveRDS(output_df
       #               ,file = RDS_path
       #               ,ascii = FALSE
@@ -398,7 +399,9 @@ thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
       #   
       # } else {
       #   
-      #   
+      #   print(paste0("Appending file: ", RDS_path))
+
+      
       #   old_RDS <- readRDS(RDS_path)
       #   new_RDS <- rbind(old_RDS, output_df)
       #   
@@ -416,6 +419,8 @@ thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
       # fix to append feather without writing over...
       if(!file.exists(feather_path)) {
         
+        print(paste0("Creating file: ", feather_path))
+        
         write_feather(output_df
                       ,feather_path
         )
@@ -423,6 +428,8 @@ thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
         print("test point 16")
         
       } else {
+        
+        print(paste0("Appending file: ", feather_path))
         
         old_feather <- read_feather(feather_path)
         new_feather <- rbind(old_feather, output_df)
