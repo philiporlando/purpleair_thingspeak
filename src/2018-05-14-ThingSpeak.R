@@ -189,8 +189,8 @@ thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
     
     
     # request api with exception handling
-    try(primary_request <- fromJSON(primary_url))
-    try(secondary_request <- fromJSON(secondary_url))
+    try(primary_request <- jsonlite::fromJSON(primary_url))
+    try(secondary_request <- jsonlite::fromJSON(secondary_url))
     
     # break if request is NULL
     if (is_empty(primary_request$feeds) | is_empty(secondary_request$feeds)) {
@@ -376,26 +376,26 @@ thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
       #saveRDS(output_df, output_path)
       #return(output_df)
       
-      # # upgrade to saveRDS or write_feather later?
-      # if(!file.exists(txt_path)) {
-      #   
-      #   write.table(output_df
-      #               ,txt_path
-      #               ,row.names = FALSE
-      #               ,col.names = TRUE)
-      #   
-      #   print("test point 12")
-      #   
-      # } else {
-      #   
-      #   write.table(output_df
-      #               ,txt_path
-      #               ,row.names = FALSE
-      #               ,append = TRUE # append if already exists
-      #               ,col.names = FALSE) 
-      #   print("test point 13")
-      #   
-      # }
+      
+      if(!file.exists(txt_path)) {
+
+        write.table(output_df
+                    ,txt_path
+                    ,row.names = FALSE
+                    ,col.names = TRUE)
+
+        #print("test point 12")
+
+      } else {
+
+        write.table(output_df
+                    ,txt_path
+                    ,row.names = FALSE
+                    ,append = TRUE # append if already exists
+                    ,col.names = FALSE)
+        #print("test point 13")
+
+      }
       
       
       # # fix to append RDS without writing over...
