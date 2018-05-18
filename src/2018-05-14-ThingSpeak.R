@@ -84,10 +84,10 @@ pa_sf <- pa_sf[pdx, ]
 #row <- pa_sf[1,]
 
 # Sensor B testing
-#row <- pa_sf[4,]
+#row <- pa_sf[2,]
 
 # create function to collect purpleair data 8000 rows at a time
-thingspeak_collect <- function(row, start="2016-05-15", end="2018-05-15") {
+thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
   
   # for testing
   #start_date <- "2018-05-07"
@@ -118,8 +118,14 @@ thingspeak_collect <- function(row, start="2016-05-15", end="2018-05-15") {
   # tidy attributes for our output dataframe
   output_names <- c("created_at"
                     ,"entry_id"
+                    ,"sensor"
+                    ,"Label"
+                    ,"ID"
+                    #,"geometry"
                     ,"field"
-                    ,"value")  
+                    ,"value"
+                    ,"geometry"
+                    )  
   
   # create empty dataframe to store all of our api request results
   output_df <- data.frame(matrix(ncol = length(output_names)
@@ -167,6 +173,7 @@ thingspeak_collect <- function(row, start="2016-05-15", end="2018-05-15") {
       
     } else {
       
+      print(paste0(start_date, "-", end_date, " ", row$Label, " is being processed..."))
       
       # channel A field names
       primary_fields_a <- c("created_at"
@@ -246,13 +253,16 @@ thingspeak_collect <- function(row, start="2016-05-15", end="2018-05-15") {
         primary_df$Label <- row$Label
         primary_df$ID <- row$ID
         #primary_df$DEVICE_LOCATIONTYPE <- row$DEVICE_LOCATIONTYPE
-        primary_df$geometry <- row$geometry
+        #primary_df$geometry <- row$geometry
+        print("test point 1")
+        
         
         # attach PurpleAir API attributes to secondary thingspeak data
         secondary_df$Label <- row$Label
         secondary_df$ID <- row$ID
         #secondary_df$DEVICE_LOCATIONTYPE <- row$DEVICE_LOCATIONTYPE
-        secondary_df$geometry <- row$geometry
+        #secondary_df$geometry <- row$geometry
+        print("test point 2")
         
       } else {
         
@@ -260,13 +270,16 @@ thingspeak_collect <- function(row, start="2016-05-15", end="2018-05-15") {
         primary_df$Label <- row$Label
         primary_df$ID <- row$ID
         primary_df$DEVICE_LOCATIONTYPE <- row$DEVICE_LOCATIONTYPE
-        primary_df$geometry <- row$geometry
+        #primary_df$geometry <- row$geometry
+        print("test point 3")
+        
         
         # attach PurpleAir API attributes to secondary thingspeak data
         secondary_df$Label <- row$Label
         secondary_df$ID <- row$ID
         secondary_df$DEVICE_LOCATIONTYPE <- row$DEVICE_LOCATIONTYPE
-        secondary_df$geometry <- row$geometry
+        #secondary_df$geometry <- row$geometry
+        print("test point 4")
         
         # these are different depending on which request is being made (primary/secondary)
         #primary_df$THINGSPEAK_PRIMARY_ID # not needed...
@@ -274,10 +287,11 @@ thingspeak_collect <- function(row, start="2016-05-15", end="2018-05-15") {
         # filter out indoor purpleair data
         primary_df <- primary_df %>% filter(DEVICE_LOCATIONTYPE == "outside")
         primary_df <- primary_df %>% dplyr::select(-DEVICE_LOCATIONTYPE) # threw error without dplyr::
+        print("test point 5")
         
         secondary_df <- secondary_df %>% filter(DEVICE_LOCATIONTYPE == "outside")
         secondary_df <- secondary_df %>% dplyr::select(-DEVICE_LOCATIONTYPE) # thre error without dplyr::
-        
+        print("test point 6")
         
       }
       
@@ -286,17 +300,37 @@ thingspeak_collect <- function(row, start="2016-05-15", end="2018-05-15") {
       if("not_used" %in% colnames(primary_df)) {
         
         primary_df <- primary_df %>% dplyr::select(-not_used)
-        
+        print("test point 7")
       }
       
 
       # convert to tidy data
-      primary_df <- primary_df %>% gather(field, value, -c(created_at, entry_id, Label, ID, sensor, geometry))
-      secondary_df <- secondary_df %>% gather(field, value, -c(created_at, entry_id, Label, ID, sensor, geometry))
-      
+      primary_df <- primary_df %>% gather(field
+                                          ,value
+                                          ,-c(created_at
+                                              ,entry_id
+                                              ,Label
+                                              ,ID
+                                              ,sensor
+                                              #,geometry
+                                              )
+                                          )
+      print("test point 8")
+      secondary_df <- secondary_df %>% gather(field
+                                              ,value
+                                              ,-c(created_at
+                                                  ,entry_id
+                                                  ,Label
+                                                  ,ID
+                                                  ,sensor
+                                                  #,geometry
+                                                  )
+                                              )
+      print("test point 9")
       # combine primary and secondary data into single tidy df
       tidy_df <- rbind(primary_df, secondary_df)
-      
+      tidy_df$geometry <- row$geometry # trying to manipulate geom differently
+      print("test point 10")
       
       # join is inefficient!
       #df <- full_join(primary_df, secondary_df)
@@ -305,7 +339,10 @@ thingspeak_collect <- function(row, start="2016-05-15", end="2018-05-15") {
       #tidy_df <- df %>% gather(field, value, -c(created_at, entry_id))
       
       # bind single week to total requests
-      output_df <- rbind(tidy_df, output_df) # takes up too much RAM in the long run...
+      output_df <- rbind(tidy_df, output_df)
+      print("test point 11")
+      
+      # takes up too much RAM in the long run...
       #output_df <- rbind(tidy_df) # work with legacy code below
       
     }
@@ -324,12 +361,16 @@ thingspeak_collect <- function(row, start="2016-05-15", end="2018-05-15") {
                 ,row.names = FALSE
                 ,col.names = TRUE)
     
+    print("test point 12")
+    
   } else {
     
     write.table(output_df
                 ,output_path
                 ,row.names = FALSE
-                ,append = TRUE)
+                ,append = TRUE # append if already exists
+                ,col.names = FALSE) 
+    print("test point 13")
     
   }
 
@@ -338,19 +379,35 @@ thingspeak_collect <- function(row, start="2016-05-15", end="2018-05-15") {
 
 
 # for testing purposes
-# test <- pa_sf[1,]
-# df <- ddply(pa_sf
-#             ,MARGIN = 1
-#             ,FUN = thingspeak_collect)
+test <- pa_sf[1,]
+df <- as.data.frame(apply(test
+           ,MARGIN = 1
+           ,FUN = thingspeak_collect))
 
 
 # apply our read function across each row of our pa_sf df
-df <- ddply(pa_sf
+df <- plyr::ddply(pa_sf
       ,MARGIN = 1 # applies over rows
       ,FUN = thingspeak_collect
       )
 
+# rrite our data to multiple formats for posterity
+write_feather(df
+              ,path = paste0("./data/output/"
+                             ,format(Sys.time()
+                                     ,"%Y-%m-%d")
+                             ,"-purpleair-thingspeak.feather"))
 
-write_feather(df, "./output/2018-05-16-output.feather")
-saveRDS(df, "./output/2018-05-16-output.RDS")
-write.csv(df, "./output/2018-05-16-output.csv")
+saveRDS(df
+        ,file = paste0("./data/output/"
+                       ,format(Sys.time()
+                               ,"%Y-%m-%d")
+                       ,"-purpleair-thingspeak.RDS"))
+
+write.csv(df
+          ,file = paste0("./data/output/"
+                         ,format(Sys.time()
+                                 ,"%Y-%m-%d")
+                         ,"-purpleair-thingspeak.csv")
+          ,row.names = FALSE
+          ,col.names = TRUE)
