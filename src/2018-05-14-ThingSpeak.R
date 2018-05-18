@@ -93,8 +93,11 @@ thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
   #start_date <- "2018-05-07"
   #end_date <- "2018-05-14"
   
-  # file path
-  output_path <- paste0("./data/output/", format(Sys.time(), "%Y-%m-%d"), "-thingspeak.txt")
+  # output file paths
+  txt_path <- paste0("./data/output/", format(Sys.time(), "%Y-%m-%d"), "-thingspeak.txt")
+  RDS_path <- paste0("./data/output/", format(Sys.time(), "%Y-%m-%d"), "-thingspeak.RDS")
+  feather_path <- paste0("./data/output/", format(Sys.time(), "%Y-%m-%d"), "-thingspeak.feather")
+  
   #con <- file(output_path)
   
   
@@ -364,10 +367,11 @@ thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
   #saveRDS(output_df, output_path)
   #return(output_df)
   
-  if(!exists(output_path)) {
+  # upgrade to saveRDS or write_feather later?
+  if(!exists(txt_path)) {
     
     write.table(output_df
-                ,output_path
+                ,txt_path
                 ,row.names = FALSE
                 ,col.names = TRUE)
     
@@ -376,7 +380,7 @@ thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
   } else {
     
     write.table(output_df
-                ,output_path
+                ,txt_path
                 ,row.names = FALSE
                 ,append = TRUE # append if already exists
                 ,col.names = FALSE) 
@@ -385,23 +389,81 @@ thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
   }
 
 
+  # fix to append RDS without writing over...
+  if(!exists(RDS_path)) {
+    
+    saveRDS(output_df
+                ,file = RDS_path
+                ,ascii = FALSE
+                ,compress = TRUE
+            )
+    
+    print("test point 14")
+    
+  } else {
+    
+    
+    old_df <- readRDS(RDS_path)
+    new_df <- rbind(old_df, output_df)
+    
+    write.table(new_df
+                ,file = RDS_path
+                ,ascii = FALSE
+                ,compress = TRUE # append if already exists
+                )
+    
+    print("test point 15")
+    
+  }
+  
+  
+  # fix to append feather without writing over...
+  if(!exists(feather_path)) {
+
+    write_feather(output_df
+            ,feather_path
+    )
+
+    print("test point 16")
+
+  } else {
+
+    old_df <- read_feather(feather_path)
+    new_df <- rbind(old_df, output_df)
+
+    write_feather(new_df
+                ,feather_path
+                )
+    
+    print("test point 15")
+
+  }
+
+  
 }
 
 
 # for testing purposes
-test <- pa_sf[1,]
-df <- as.data.frame(apply(test
-           ,MARGIN = 1
-           ,FUN = thingspeak_collect))
+test <- pa_sf[2,]
+
+apply(test
+      ,MARGIN = 1
+      ,FUN = thingspeak_collect
+      )
 
 
 # apply our read function across each row of our pa_sf df
-df <- st_as_sf(apply(pa_sf
+df <- apply(pa_sf
       ,MARGIN = 1 # applies over rows
       ,FUN = thingspeak_collect
-      ))
+      )
 
-# rrite our data to multiple formats for posterity
+
+
+# perhaps the better way to do this is periodically writing data to file within the loop
+# instead of trying to store everything into memory...
+
+# write our data to multiple formats for posterity
 write_feather(df
               ,path = paste0("./data/output/"
                              ,format(Sys.time()
