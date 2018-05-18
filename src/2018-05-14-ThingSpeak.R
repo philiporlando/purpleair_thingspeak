@@ -421,7 +421,7 @@ thingspeak_collect <- function(row, start="2018-04-30", end="2018-05-15") {
         old_RDS <- readRDS(RDS_path)
         new_RDS <- rbind(old_RDS, output_df)
 
-        write.table(new_RDS
+        saveRDS(new_RDS
                     ,file = RDS_path
                     ,ascii = FALSE
                     ,compress = TRUE # append if already exists
