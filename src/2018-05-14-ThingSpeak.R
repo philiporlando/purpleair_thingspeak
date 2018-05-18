@@ -395,7 +395,8 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-15") {
                     ,txt_path
                     ,row.names = FALSE
                     ,append = TRUE # append if already exists
-                    ,col.names = FALSE)
+                    ,col.names = FALSE
+                    ,sep = ",")
         #print("test point 13")
 
       }
