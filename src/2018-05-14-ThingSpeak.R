@@ -396,7 +396,7 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-15") {
                     ,row.names = FALSE
                     ,append = TRUE # append if already exists
                     ,col.names = FALSE
-                    ,sep = ",")
+                    ,sep =  ",")
         #print("test point 13")
 
       }
