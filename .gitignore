@@ -3,3 +3,4 @@
 **/*.RData
 **/*.Rhistory
 **/*.gmail_private
+**/*batteries.pgpss

@@ -100,7 +100,15 @@ pa_sf <- pa_sf[pdx, ]
 #row <- pa_sf[2,]
 
 # create function to collect purpleair data 8000 rows at a time
-thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-15") {
+thingspeak_collect <- function(row, start="2018-05-07", end="2018-05-15") {
+  
+  ## connecting to local db
+  host <- "localhost"
+  db <- "purpleair"
+  user <- "porlando"
+  port <- 5432
+  pw <- scan("./batteries.pgpss", what = "")
+  
   
   # for testing
   #start_date <- "2018-05-07"
@@ -111,6 +119,7 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-15") {
   RDS_path <- paste0("./data/output/", format(Sys.time(), "%Y-%m-%d"), "-thingspeak.RDS")
   feather_path <- paste0("./data/output/", format(Sys.time(), "%Y-%m-%d"), "-thingspeak.feather")
   
+  # for saveRDS, not for dbConnect()
   #con <- file(output_path)
   
   
@@ -138,9 +147,9 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-15") {
   output_names <- c("created_at"
                     ,"entry_id"
                     ,"sensor"
-                    ,"Label"
-                    ,"ID"
-                    ,"geometry"
+                    ,"label"
+                    ,"id"
+                    ,"geom"
                     ,"field"
                     ,"value"
                     #,"geometry"
@@ -189,6 +198,8 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-15") {
     
     
     # request api with exception handling
+    # include http status code handling in future!
+    # avoid http 503 error from thingspeak
     try(primary_request <- jsonlite::fromJSON(primary_url))
     try(secondary_request <- jsonlite::fromJSON(secondary_url))
     
@@ -276,35 +287,35 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-15") {
       if(row$DEVICE_LOCATIONTYPE == "") {
         
         # attach PurpleAir API attributes to primary thingspeak data
-        primary_df$Label <- row$Label
-        primary_df$ID <- row$ID
+        primary_df$label <- row$Label
+        primary_df$id <- row$ID
         #primary_df$DEVICE_LOCATIONTYPE <- row$DEVICE_LOCATIONTYPE
-        primary_df$geometry <- row$geometry
+        primary_df$geom <- row$geometry
         #print("test point 1")
         
         
         # attach PurpleAir API attributes to secondary thingspeak data
-        secondary_df$Label <- row$Label
-        secondary_df$ID <- row$ID
+        secondary_df$label <- row$Label
+        secondary_df$id <- row$ID
         #secondary_df$DEVICE_LOCATIONTYPE <- row$DEVICE_LOCATIONTYPE
-        secondary_df$geometry <- row$geometry
+        secondary_df$geom <- row$geometry
         #print("test point 2")
         
       } else {
         
         # attach PurpleAir API attributes to primary thingspeak data
-        primary_df$Label <- row$Label
-        primary_df$ID <- row$ID
+        primary_df$label <- row$Label
+        primary_df$id <- row$ID
         primary_df$DEVICE_LOCATIONTYPE <- row$DEVICE_LOCATIONTYPE
-        primary_df$geometry <- row$geometry
+        primary_df$geom <- row$geometry
         #print("test point 3")
         
         
         # attach PurpleAir API attributes to secondary thingspeak data
-        secondary_df$Label <- row$Label
-        secondary_df$ID <- row$ID
+        secondary_df$label <- row$Label
+        secondary_df$id <- row$ID
         secondary_df$DEVICE_LOCATIONTYPE <- row$DEVICE_LOCATIONTYPE
-        secondary_df$geometry <- row$geometry
+        secondary_df$geom <- row$geometry
         #print("test point 4")
         
         # these are different depending on which request is being made (primary/secondary)
@@ -335,10 +346,10 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-15") {
                                           ,value
                                           ,-c(created_at
                                               ,entry_id
-                                              ,Label
-                                              ,ID
+                                              ,label
+                                              ,id
                                               ,sensor
-                                              ,geometry
+                                              ,geom
                                               )
                                           )
       #print("test point 8")
@@ -346,16 +357,16 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-15") {
                                               ,value
                                               ,-c(created_at
                                                   ,entry_id
-                                                  ,Label
-                                                  ,ID
+                                                  ,label
+                                                  ,id
                                                   ,sensor
-                                                  ,geometry
+                                                  ,geom
                                                   )
                                               )
       #print("test point 9")
       # combine primary and secondary data into single tidy df
       tidy_df <- rbind(primary_df, secondary_df)
-      #tidy_df$geometry <- row$geometry # trying to manipulate geom differently
+      #tidy_df$geom <- row$geometry # trying to manipulate geom differently
       #print("test point 10")
       
       # join is inefficient!
@@ -366,6 +377,27 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-15") {
       
       # bind single week to total requests
       output_df <- rbind(tidy_df, output_df)
+      
+      # open connection to our db
+      con <- dbConnect(drv = RPostgres::Postgres()
+                       ,dbname = db
+                       ,host = host
+                       ,port = port
+                       ,password = pw
+                       ,user = user)
+      
+      
+      # write output_df to our db
+      dbWriteTable(con
+                   ,"observation"
+                   ,tidy_df # only append new data (!output_df)
+                   ,append = TRUE
+                   ,row.names = FALSE)
+      
+      # close connection to db
+      dbDisconnect(con)
+      
+      return(output_df) # only for testing...
       #print("test point 11")
       
       # takes up too much RAM in the long run...
@@ -377,29 +409,29 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-15") {
       #return(output_df)
       
       
-      if(!file.exists(txt_path)) {
-
-        
-        print(paste0("Creating file: ", basename(txt_path)))
-        write.table(output_df
-                    ,txt_path
-                    ,row.names = FALSE
-                    ,col.names = TRUE)
-
-        #print("test point 12")
-
-      } else {
-
-        print(paste0("Appending file: ", basename(txt_path)))
-        write.table(output_df
-                    ,txt_path
-                    ,row.names = FALSE
-                    ,append = TRUE # append if already exists
-                    ,col.names = FALSE
-                    ,sep =  ",")
-        #print("test point 13")
-
-      }
+      # if(!file.exists(txt_path)) {
+      # 
+      #   
+      #   print(paste0("Creating file: ", basename(txt_path)))
+      #   write.table(output_df
+      #               ,txt_path
+      #               ,row.names = FALSE
+      #               ,col.names = TRUE)
+      # 
+      #   #print("test point 12")
+      # 
+      # } else {
+      # 
+      #   print(paste0("Appending file: ", basename(txt_path)))
+      #   write.table(output_df
+      #               ,txt_path
+      #               ,row.names = FALSE
+      #               ,append = TRUE # append if already exists
+      #               ,col.names = FALSE
+      #               ,sep =  ",")
+      #   #print("test point 13")
+      # 
+      # }
       
       # # reading in old_df is too expensive, exceeding 32GB!!!!
       # #  Error in coldataFeather(x, i) : 
@@ -474,21 +506,55 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-15") {
 }
 
 # # for testing purposes
-# test <- pa_sf[1:10,]
+# test <- pa_sf[1,]
 # 
 # # this will append data that already exists within the files...
 # # figure out how to append intelligently... only add distinct values to file/db in future!
-# invisible(apply(test
-#       ,MARGIN = 1
-#       ,FUN = thingspeak_collect
-#       ))
+df <- invisible(apply(test
+      ,MARGIN = 1
+      ,FUN = thingspeak_collect
+      ))
 
+df <- df$`236`
 
 # apply our read function across each row of our pa_sf df
 invisible(apply(pa_sf
       ,MARGIN = 1 # applies over rows
       ,FUN = thingspeak_collect
       ))
+
+## connecting to local db
+host <- "localhost"
+db <- "purpleair"
+user <- "porlando"
+port <- 5432
+pw <- scan("./batteries.pgpss", what = "")
+
+con <- dbConnect(drv = RPostgres::Postgres()
+                 ,dbname = db
+                 ,host = host
+                 ,port = port
+                 ,password = pw
+                 ,user = user)
+
+
+dbListTables(conn = con)
+
+dbListFields(conn = con
+             ,name = "observation"
+             )
+
+st_read(conn = con
+           ,query = "delete from observation;")
+
+dbWriteTable(con
+             ,"observation"
+             ,df
+             ,append = TRUE
+             ,row.names = FALSE)
+
+dbDisconnect(con)
+
 
 # broken on linux... error in jython.exec(rJython, mail) : (-1, 'SSL exception')
 # send_text("sent from R", "Your R process is done.")
