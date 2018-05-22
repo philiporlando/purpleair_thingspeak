@@ -116,7 +116,7 @@ con <- dbConnect(drv = RPostgres::Postgres()
 
 # deletes ALL rows from observation table:
 #txt <- "delete from observation;"
-txt <- "delete from df_wide;"
+txt <- "delete from observation;"
 dbGetQuery(conn = con, txt)
 
 # closes connection
@@ -390,7 +390,7 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-15") {
       
       # write output_df to our db
       invisible(dbWriteTable(con
-                             ,"df_wide"
+                             ,"observation"
                              ,df_wide # only append new data (!output_df)
                              ,append = TRUE
                              ,row.names = FALSE))
