@@ -99,16 +99,33 @@ pa_sf <- pa_sf[pdx, ]
 # Sensor B testing
 #row <- pa_sf[2,]
 
+## connecting to local db
+host <- "localhost"
+db <- "purpleair"
+user <- "porlando"
+port <- 5432
+pw <- scan("./batteries.pgpss", what = "")
+
+# initally connect to clear existing data
+con <- dbConnect(drv = RPostgres::Postgres()
+                 ,dbname = db
+                 ,host = host
+                 ,port = port
+                 ,password = pw
+                 ,user = user)
+
+# deletes ALL rows from observation table:
+#txt <- "delete from observation;"
+txt <- "delete from df_wide;"
+dbGetQuery(conn = con, txt)
+
+# closes connection
+dbDisconnect(con)
+
+
+
 # create function to collect purpleair data 8000 rows at a time
 thingspeak_collect <- function(row, start="2018-05-07", end="2018-05-15") {
-  
-  ## connecting to local db
-  host <- "localhost"
-  db <- "purpleair"
-  user <- "porlando"
-  port <- 5432
-  pw <- scan("./batteries.pgpss", what = "")
-  
   
   # for testing
   #start_date <- "2018-05-07"
@@ -232,8 +249,8 @@ thingspeak_collect <- function(row, start="2018-05-07", end="2018-05-15") {
                               ,"p_2_5_um"
                               ,"p_5_0_um"
                               ,"p_10_0_um"
-                              ,"p1_0_cf_1"
-                              ,"p10_0_cf_1")
+                              ,"pm1_0_cf_1"
+                              ,"pm10_0_cf_1")
       
       #channel B field names
       primary_fields_b <- c("created_at"
@@ -332,7 +349,56 @@ thingspeak_collect <- function(row, start="2018-05-07", end="2018-05-15") {
         
       }
       
+      # create wide dataframe to use less rows (tidy 100k rows per week per sensor)
+      df_wide <- full_join(primary_df, secondary_df)
+      
+      # reorder columns 
+      df_wide <- df_wide %>% dplyr::select(
+        created_at # put this first out of convention
+        ,entry_id
+        ,id
+        ,sensor
+        ,label
+        #,uptime_min # Channel A
+        #,rssi_wifi_strength # Channel A
+        #,temp_f # Channel A
+        #,humidity # Channel A
+        ,pm1_0_atm
+        ,pm2_5_atm
+        ,pm10_0_atm
+        ,pm1_0_cf_1
+        ,pm2_5_cf_1
+        ,pm10_0_cf_1
+        ,p_0_3_um
+        ,p_0_5_um
+        ,p_1_0_um
+        ,p_2_5_um
+        ,p_5_0_um
+        ,p_10_0_um
+        ,geom # put this last out of convention
+      )
 
+      
+      # open connection to our db
+      con <- dbConnect(drv = RPostgres::Postgres()
+                       ,dbname = db
+                       ,host = host
+                       ,port = port
+                       ,password = pw
+                       ,user = user)
+      
+      
+      # write output_df to our db
+      invisible(dbWriteTable(con
+                             ,"df_wide"
+                             ,df_wide # only append new data (!output_df)
+                             ,append = TRUE
+                             ,row.names = FALSE))
+      #print("Appending db...")
+      # close connection to db
+      dbDisconnect(con)
+      
+      
       # remove NA field "not_used"
       if("not_used" %in% colnames(primary_df)) {
         
@@ -376,28 +442,28 @@ thingspeak_collect <- function(row, start="2018-05-07", end="2018-05-15") {
       #tidy_df <- df %>% gather(field, value, -c(created_at, entry_id))
       
       # bind single week to total requests
-      output_df <- rbind(tidy_df, output_df)
+      #output_df <- rbind(tidy_df, output_df) # not needed with db
       
-      # open connection to our db
-      con <- dbConnect(drv = RPostgres::Postgres()
-                       ,dbname = db
-                       ,host = host
-                       ,port = port
-                       ,password = pw
-                       ,user = user)
+      # # open connection to our db
+      # con <- dbConnect(drv = RPostgres::Postgres()
+      #                  ,dbname = db
+      #                  ,host = host
+      #                  ,port = port
+      #                  ,password = pw
+      #                  ,user = user)
+      # 
+      # 
+      # # write output_df to our db
+      # invisible(dbWriteTable(con
+      #              ,"observation"
+      #              ,tidy_df # only append new data (!output_df)
+      #              ,append = TRUE
+      #              ,row.names = FALSE))
+      # #print("Appending db...")
+      # # close connection to db
+      # dbDisconnect(con)
       
-      
-      # write output_df to our db
-      dbWriteTable(con
-                   ,"observation"
-                   ,tidy_df # only append new data (!output_df)
-                   ,append = TRUE
-                   ,row.names = FALSE)
-      
-      # close connection to db
-      dbDisconnect(con)
-      
-      return(output_df) # only for testing...
+      #return(output_df) # only for testing...
       #print("test point 11")
       
       # takes up too much RAM in the long run...
@@ -510,50 +576,49 @@ thingspeak_collect <- function(row, start="2018-05-07", end="2018-05-15") {
 # 
 # # this will append data that already exists within the files...
 # # figure out how to append intelligently... only add distinct values to file/db in future!
-df <- invisible(apply(test
-      ,MARGIN = 1
-      ,FUN = thingspeak_collect
-      ))
+# invisible(apply(test
+#       ,MARGIN = 1
+#       ,FUN = thingspeak_collect
+#       ))
 
-df <- df$`236`
-
-# apply our read function across each row of our pa_sf df
+## apply our read function across each row of our pa_sf df
 invisible(apply(pa_sf
       ,MARGIN = 1 # applies over rows
       ,FUN = thingspeak_collect
       ))
 
 ## connecting to local db
-host <- "localhost"
-db <- "purpleair"
-user <- "porlando"
-port <- 5432
-pw <- scan("./batteries.pgpss", what = "")
+# host <- "localhost"
+# db <- "purpleair"
+# user <- "porlando"
+# port <- 5432
+# pw <- scan("./batteries.pgpss", what = "")
+# 
+# con <- dbConnect(drv = RPostgres::Postgres()
+#                  ,dbname = db
+#                  ,host = host
+#                  ,port = port
+#                  ,password = pw
+#                  ,user = user)
+# 
+# 
+# dbListTables(conn = con)
+# 
+# dbListFields(conn = con
+#              ,name = "observation"
+#              )
+# 
+# dbWriteTable(con
+#              ,"observation"
+#              ,df
+#              ,append = TRUE
+#              ,row.names = FALSE)
+# 
+# # delete ALL data from a given table!
+# #txt <- "delete from observation;"
+# #dbGetQuery(conn = con, txt)
+# dbDisconnect(con)
 
-con <- dbConnect(drv = RPostgres::Postgres()
-                 ,dbname = db
-                 ,host = host
-                 ,port = port
-                 ,password = pw
-                 ,user = user)
-
-
-dbListTables(conn = con)
-
-dbListFields(conn = con
-             ,name = "observation"
-             )
-
-st_read(conn = con
-           ,query = "delete from observation;")
-
-dbWriteTable(con
-             ,"observation"
-             ,df
-             ,append = TRUE
-             ,row.names = FALSE)
-
-dbDisconnect(con)
 
 
 # broken on linux... error in jython.exec(rJython, mail) : (-1, 'SSL exception')
