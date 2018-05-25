@@ -102,7 +102,7 @@ port <- 5432
 pw <- scan("./batteries.pgpss", what = "")
 
 
-
+# deletes existing db table observation is choice == "yes"
 choice <- readline('DROP TABLE observation?! (y/n)')
 
 if (tolower(choice) == "y" | tolower(choice) == "yes") {
