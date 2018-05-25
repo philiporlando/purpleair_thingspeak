@@ -106,21 +106,34 @@ user <- "porlando"
 port <- 5432
 pw <- scan("./batteries.pgpss", what = "")
 
-# initally connect to clear existing data
-con <- dbConnect(drv = RPostgres::Postgres()
-                 ,dbname = db
-                 ,host = host
-                 ,port = port
-                 ,password = pw
-                 ,user = user)
 
-# deletes ALL rows from observation table:
-#txt <- "delete from observation;"
-txt <- "delete from observation;"
-dbGetQuery(conn = con, txt)
 
-# closes connection
-dbDisconnect(con)
+choice <- readline('DROP TABLE observation?! (y/n)')
+
+if (tolower(choice) == "y" | tolower(choice) == "yes") {
+  
+  print("Dropping table observation...")
+  
+  # initally connect to clear existing data
+  con <- dbConnect(drv = RPostgres::Postgres()
+                   ,dbname = db
+                   ,host = host
+                   ,port = port
+                   ,password = pw
+                   ,user = user)
+  
+  # deletes ALL rows from observation table:
+  #txt <- "delete from observation;"
+  txt <- "delete from observation;"
+  dbGetQuery(conn = con, txt)
+  
+  # closes connection
+  dbDisconnect(con)
+  
+}
+
+
+
 
 
 
