@@ -93,11 +93,6 @@ pa_sf <- st_transform(pa_sf, crs = st_crs(pdx))
 pa_sf <- pa_sf[pdx, ]
 
 
-# Sensor A testing
-#row <- pa_sf[1,]
-
-# Sensor B testing
-#row <- pa_sf[2,]
 
 ## connecting to local db
 host <- "localhost"
@@ -135,6 +130,11 @@ if (tolower(choice) == "y" | tolower(choice) == "yes") {
 
 
 
+# Sensor A testing
+#row <- pa_sf[1,]
+
+# Sensor B testing
+#row <- pa_sf[2,]
 
 
 # create function to collect purpleair data 8000 rows at a time
@@ -145,9 +145,9 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-15") {
   #end_date <- "2018-05-14"
   
   # output file paths
-  txt_path <- paste0("./data/output/", format(Sys.time(), "%Y-%m-%d"), "-thingspeak.txt")
-  RDS_path <- paste0("./data/output/", format(Sys.time(), "%Y-%m-%d"), "-thingspeak.RDS")
-  feather_path <- paste0("./data/output/", format(Sys.time(), "%Y-%m-%d"), "-thingspeak.feather")
+  #txt_path <- paste0("./data/output/", format(Sys.time(), "%Y-%m-%d"), "-thingspeak.txt")
+  #RDS_path <- paste0("./data/output/", format(Sys.time(), "%Y-%m-%d"), "-thingspeak.RDS")
+  #feather_path <- paste0("./data/output/", format(Sys.time(), "%Y-%m-%d"), "-thingspeak.feather")
   
   # for saveRDS, not for dbConnect()
   #con <- file(output_path)
