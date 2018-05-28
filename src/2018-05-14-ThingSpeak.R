@@ -103,11 +103,9 @@ pw <- scan("./batteries.pgpss", what = "")
 
 
 # deletes existing db table observation is choice == "yes"
-choice <- readline('DROP TABLE observation?! (y/n)')
+choice <- readline('DELETE TABLE observation?! (y/n)')
 
 if (tolower(choice) == "y" | tolower(choice) == "yes") {
-  
-  print("Dropping table observation...")
   
   # initally connect to clear existing data
   con <- dbConnect(drv = RPostgres::Postgres()
@@ -119,15 +117,17 @@ if (tolower(choice) == "y" | tolower(choice) == "yes") {
   
   # deletes ALL rows from observation table:
   #txt <- "delete from observation;"
-  txt <- "delete from observation;"
-  dbGetQuery(conn = con, txt)
+  delete_table <- "delete from observation;"
+  vacuum_table <- "vacuum full observation;"
   
+  dbGetQuery(conn = con, delete_table)
+  print("Dropping table observation...")
+  dbGetQuery(conn = con, vacuum_table)
+  print("Vacuum full observation...")
   # closes connection
   dbDisconnect(con)
   
 }
-
-
 
 
 # Sensor A testing
@@ -138,7 +138,7 @@ if (tolower(choice) == "y" | tolower(choice) == "yes") {
 
 
 # create function to collect purpleair data 8000 rows at a time
-thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-15") {
+thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-29") {
   
   # for testing
   #start_date <- "2018-05-07"
