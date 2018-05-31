@@ -63,6 +63,9 @@ epsg_26911 <- "+proj=utm +zone=10 +ellps=GRS80 +datum=NAD83 +units=m +no_defs"
 # Oregon North NAD83 HARN meters
 epsg_2838 <- "+proj=lcc +lat_1=46 +lat_2=44.33333333333334 +lat_0=43.66666666666666 +lon_0=-120.5 +x_0=2500000 +y_0=0 +ellps=GRS80 +units=m +no_defs "
 
+# Oregon North NAD83 Meters UTM Zone 10
+epsg_26910 <- "+proj=utm +zone=10 +ellps=GRS80 +datum=NAD83 +units=m +no_defs "
+
 # calling our purpleair json webscrape function to generate a list of ALL sensors
 #python.load("./purpleair_id_key.py", get.exception = TRUE) # this unexpectedly crashes when running python within RStudio
 # run from bash instead...
@@ -72,7 +75,7 @@ urban_areas <- readOGR(dsn = "./data/tigerline/tl_2017_us_uac10.shp")
 
 # filtering out only Portland, OR shapefiles
 pdx <- subset(urban_areas, str_detect(NAME10, "Portland, OR"))
-pdx <- spTransform(pdx, CRSobj = CRS(epsg_2838))
+pdx <- spTransform(pdx, CRSobj = CRS(epsg_26910))
 pdx <- st_as_sf(pdx)
 
 # reading our scraped data in
@@ -162,7 +165,8 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-29") {
   secondary_key <- row$THINGSPEAK_SECONDARY_ID_READ_KEY
   
   # convert geometry to text for data wrangling
-  row$geometry <- st_as_text(row$geometry)
+  row$geometry <- st_as_text(row$geometry
+                             ,EWKT = TRUE)
   #row$geometry <- st_as_sfc(row$geometry) # converts back to geom
   
   # need to break up our entire request into 8000 length chunks...
@@ -230,6 +234,23 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-29") {
     # request api with exception handling
     # include http status code handling in future!
     # avoid http 503 error from thingspeak
+    
+    for (i in 1:100) {
+      
+      primary_result <- GET(primary_url)
+      print(primary_result$status_code)
+
+      
+    }
+    
+    
+    # primary_result <- GET(primary_url)
+    # primary_result$status_code
+    # primary_result %>% content() %>% fromJSON()
+    # primary_url %>% GET() %>% content("text") %>% fromJSON()
+    # secondary_result <- GET(secondary_url)
+    # secondary_result$status_code
+    
     try(primary_request <- jsonlite::fromJSON(primary_url))
     try(secondary_request <- jsonlite::fromJSON(secondary_url))
     
@@ -291,24 +312,135 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-29") {
       # A and B sensors provide different fields!
       if (is.na(row$ParentID)) {
         
-        # assign A field names
+        # read in primary data for A sensor
         primary_df <- primary_request$feeds
+        
+        # assign A field names for primary data
         colnames(primary_df) <- primary_fields_a
+        
+        # remove non-numeric columns before grouping by date
+        primary_df <- primary_df %>% dplyr::select(-c(entry_id, uptime_min, rssi_wifi_strength))
+
+        # cast from character to numeric class
+        primary_df$pm1_0_atm <- as.numeric(primary_df$pm1_0_atm)
+        primary_df$pm2_5_atm <- as.numeric(primary_df$pm2_5_atm)
+        primary_df$pm10_0_atm <- as.numeric(primary_df$pm10_0_atm)
+        primary_df$temp_f <- as.numeric(primary_df$temp_f)
+        primary_df$humidity <- as.numeric(primary_df$humidity)
+        primary_df$pm2_5_cf_1 <- as.numeric(primary_df$pm2_5_cf_1)
+        
+        # group by 1-minute to allow overlap between primary and secondary timestamps
+        primary_df <- primary_df %>%
+          group_by(created_at = cut(as.POSIXct(created_at
+                                               ,format = "%Y-%m-%dT%H:%M:%SZ"
+                                               ,tz = "GMT"
+          )
+          ,breaks = "1 min")) %>%
+          summarize_all(funs(mean))
+        
+        primary_df$created_at <- as.character(primary_df$created_at)
+        
+        # add sensor label
         primary_df$sensor <- "A"
         
+        # read in secondary data for A sensor
         secondary_df <- secondary_request$feeds
+        
+        # assign A field names for secondary data
         colnames(secondary_df) <- secondary_fields_a
+        
+        # remove non-numeric columns before grouping
+        secondary_df <- secondary_df %>% dplyr::select(-c(entry_id))
+        
+        # cast from character to numeric class
+        secondary_df$p_0_3_um <- as.numeric(secondary_df$p_0_3_um)
+        secondary_df$p_0_5_um <- as.numeric(secondary_df$p_0_5_um)
+        secondary_df$p_1_0_um <- as.numeric(secondary_df$p_1_0_um)
+        secondary_df$p_2_5_um <- as.numeric(secondary_df$p_2_5_um)
+        secondary_df$p_5_0_um <- as.numeric(secondary_df$p_0_5_um)
+        secondary_df$p_10_0_um <- as.numeric(secondary_df$p_10_0_um)
+        secondary_df$pm1_0_cf_1 <- as.numeric(secondary_df$pm1_0_cf_1)
+        secondary_df$pm10_0_cf_1 <- as.numeric(secondary_df$pm10_0_cf_1)
+        
+        # group by 1-minute to allow overlap between primary and secondary timestamps
+        secondary_df <- secondary_df %>%
+          group_by(created_at = cut(as.POSIXct(created_at
+                                               ,format = "%Y-%m-%dT%H:%M:%SZ"
+                                               ,tz = "GMT"
+          )
+          ,breaks = "1 min")) %>%
+          summarize_all(funs(mean))
+        
+        secondary_df$created_at <- as.character(secondary_df$created_at)
+        
+        # add sensor label
         secondary_df$sensor <- "A"
         
       } else {
         
-        # assign B field names
+        # read in primary data for B sensor
         primary_df <- primary_request$feeds
+        
+        # assign B field names for primary data
         colnames(primary_df) <-primary_fields_b
+        
+        
+        # remove non-numeric columns before grouping by date
+        primary_df <- primary_df %>% dplyr::select(-c(entry_id, free_heap_memory, analog_input, sensor_firmware_pressure, not_used))
+        
+        # cast from character to numeric
+        primary_df$pm1_0_atm <- as.numeric(primary_df$pm1_0_atm)
+        primary_df$pm2_5_atm <- as.numeric(primary_df$pm2_5_atm)
+        primary_df$pm10_0_atm <- as.numeric(primary_df$pm10_0_atm)
+        primary_df$pm2_5_cf_1 <- as.numeric(primary_df$pm2_5_cf_1)
+        
+        # group by 1-minute to allow overlap between primary and secondary timestamps
+        primary_df <- primary_df %>%
+          group_by(created_at = cut(as.POSIXct(created_at
+                                               ,format = "%Y-%m-%dT%H:%M:%SZ"
+                                               ,tz = "GMT"
+          )
+          ,breaks = "1 min")) %>%
+          summarize_all(funs(mean))
+        
+        primary_df$created_at <- as.character(primary_df$created_at)
+      
+        # add sensor label
         primary_df$sensor <- "B"
         
+        # read in secondary data for B sensor
         secondary_df <- secondary_request$feeds
+        
+        # assign B field names for secondary sensor
         colnames(secondary_df) <- secondary_fields_b
+        
+        # remove non-numeric columns before grouping
+        secondary_df <- secondary_df %>% dplyr::select(-c(entry_id))
+        
+        # cast character to numeric class
+        secondary_df$p_0_3_um <- as.numeric(secondary_df$p_0_3_um)
+        secondary_df$p_0_5_um <- as.numeric(secondary_df$p_0_5_um)
+        secondary_df$p_1_0_um <- as.numeric(secondary_df$p_1_0_um)
+        secondary_df$p_2_5_um <- as.numeric(secondary_df$p_2_5_um)
+        secondary_df$p_5_0_um <- as.numeric(secondary_df$p_5_0_um)
+        secondary_df$p_10_0_um <- as.numeric(secondary_df$p_10_0_um)
+        secondary_df$pm1_0_cf_1 <- as.numeric(secondary_df$pm1_0_cf_1)
+        secondary_df$pm10_0_cf_1 <- as.numeric(secondary_df$pm10_0_cf_1)
+        
+        
+        # group by 1-minute to allow overlap between primary and secondary timestamps
+        secondary_df <- secondary_df %>%
+          group_by(created_at = cut(as.POSIXct(created_at
+                                               ,format = "%Y-%m-%dT%H:%M:%SZ"
+                                               ,tz = "GMT"
+          )
+          ,breaks = "1 min")) %>%
+          summarize_all(funs(mean))
+        
+        secondary_df$created_at <- as.character(secondary_df$created_at)
+        
+        
+        # add sensor label
         secondary_df$sensor <- "B"
         
       }
@@ -401,8 +533,19 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-29") {
                        ,user = user)
       
       
+      st_write_db(conn = conn
+                  ,obj = df_wide # df to write
+                  ,table = 'observation' # relation name
+                  ,query = "INSERT INTO observation ;"
+                  ,drop_table = FALSE
+                  ,try_drop = FALSE
+                  ,debug = TRUE
+      )
+      
+      
       # write output_df to our db
       invisible(dbWriteTable(con
+                             
                              ,"observation" # db table name
                              ,df_wide # only append new data (!output_df)
                              ,append = TRUE
