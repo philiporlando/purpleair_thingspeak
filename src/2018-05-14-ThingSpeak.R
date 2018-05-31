@@ -243,14 +243,8 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-29") {
       
     }
     
-    
-    # primary_result <- GET(primary_url)
-    # primary_result$status_code
-    # primary_result %>% content() %>% fromJSON()
-    # primary_url %>% GET() %>% content("text") %>% fromJSON()
-    # secondary_result <- GET(secondary_url)
-    # secondary_result$status_code
-    
+  
+    # try pulling from thinspeak API  
     try(primary_request <- jsonlite::fromJSON(primary_url))
     try(secondary_request <- jsonlite::fromJSON(secondary_url))
     
