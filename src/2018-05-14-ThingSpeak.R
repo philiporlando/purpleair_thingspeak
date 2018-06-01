@@ -494,7 +494,7 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-29") {
       # reorder columns 
       df_wide <- df_wide %>% dplyr::select(
         created_at # put this first out of convention
-        ,entry_id
+        #,entry_id
         ,id
         ,sensor
         ,label
@@ -517,6 +517,9 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-29") {
         ,geom # put this last out of convention
       )
 
+      df_wide$geom <- st_as_sfc(df_wide$geom)
+      
+      df_wide <- st_as_sf(df_wide)
       
       # open connection to our db
       con <- dbConnect(drv = RPostgres::Postgres()
@@ -527,10 +530,11 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-29") {
                        ,user = user)
       
       
-      st_write_db(conn = conn
+      st_write(dsn = con
                   ,obj = df_wide # df to write
+                  ,geom_name = "geom"
                   ,table = 'observation' # relation name
-                  ,query = "INSERT INTO observation ;"
+                  ,query = "INSERT INTO observation ON CONFLICT DO NOTHING;"
                   ,drop_table = FALSE
                   ,try_drop = FALSE
                   ,debug = TRUE
@@ -538,8 +542,7 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-29") {
       
       
       # write output_df to our db
-      invisible(dbWriteTable(con
-                             
+      invisible(dbWriteTable(conn = con
                              ,"observation" # db table name
                              ,df_wide # only append new data (!output_df)
                              ,append = TRUE
