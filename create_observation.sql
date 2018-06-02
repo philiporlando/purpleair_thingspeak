@@ -2,7 +2,7 @@
     created_at varchar(20)
     --,PRIMARY KEY(created_at, id, sensor, entry_id, label) 
     --,entry_id varchar(20)
-    ,id varchar(4)
+    ,id varchar(10)
     ,sensor char(1)
     ,label varchar(100)
     ,pm1_0_atm numeric

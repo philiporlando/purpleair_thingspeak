@@ -549,11 +549,11 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-29") {
       
       
       # write output_df to our db
-      invisible(dbWriteTable(conn = con
+      invisible(try(dbWriteTable(conn = con
                              ,"observation" # db table name
                              ,df_wide # only append new data (!output_df)
                              ,append = TRUE
-                             ,row.names = FALSE))
+                             ,row.names = FALSE)))
       #print("Appending db...")
       # close connection to db
       dbDisconnect(con)
