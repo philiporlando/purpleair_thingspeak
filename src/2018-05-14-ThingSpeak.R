@@ -535,17 +535,17 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-29") {
                        ,user = user)
       
       # writes only new observations to db
-      st_write(dsn = con
-                  ,obj = observation # df to write
-                  ,geom_name = "geom"
-                  ,table = 'observation' # relation name
-                  ,query = "INSERT INTO observation ON CONFLICT DO NOTHING;" # this isn't working, writes twice...
-                  ,layer_options = "OVERWRITE=true"
-                  ,drop_table = FALSE
-                  ,try_drop = FALSE
-                  ,debug = TRUE
-                  ,append = TRUE
-      )
+      # st_write(dsn = con
+      #             ,obj = observation # df to write
+      #             ,geom_name = "geom"
+      #             ,table = 'observation' # relation name
+      #             ,query = "INSERT INTO observation ON CONFLICT DO NOTHING;" # this isn't working, writes twice...
+      #             ,layer_options = "OVERWRITE=true"
+      #             ,drop_table = FALSE
+      #             ,try_drop = FALSE
+      #             ,debug = TRUE
+      #             ,append = TRUE
+      # )
       
       
       # write output_df to our db
