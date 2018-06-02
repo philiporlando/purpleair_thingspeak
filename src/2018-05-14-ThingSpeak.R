@@ -68,7 +68,8 @@ epsg_26910 <- "+proj=utm +zone=10 +ellps=GRS80 +datum=NAD83 +units=m +no_defs "
 
 # calling our purpleair json webscrape function to generate a list of ALL sensors
 #python.load("./purpleair_id_key.py", get.exception = TRUE) # this unexpectedly crashes when running python within RStudio
-# run from bash instead...
+# it runs from Rstudio's terminal on linux
+# runing directly from bash is the fastest...
 
 # reading in shapefiles for the entire US
 urban_areas <- readOGR(dsn = "./data/tigerline/tl_2017_us_uac10.shp")
@@ -98,11 +99,12 @@ pa_sf <- pa_sf[pdx, ]
 
 
 ## connecting to local db
-host <- "localhost"
-db <- "purpleair"
-user <- "porlando"
-port <- 5432
+host <- 'http://pgsql120.rc.pdx.edu'
+db <- 'canopycontinuum'
+user <- 'porlando'
+port <- 5433
 pw <- scan("./batteries.pgpss", what = "")
+
 
 
 # deletes existing db table observation is choice == "yes"
@@ -146,6 +148,9 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-29") {
   # for testing
   #start_date <- "2018-05-07"
   #end_date <- "2018-05-14"
+  
+  # 2-min resolution required for overlapping A & B sensors...
+  time_resolution <- "2 min"
   
   # output file paths
   #txt_path <- paste0("./data/output/", format(Sys.time(), "%Y-%m-%d"), "-thingspeak.txt")
@@ -203,9 +208,7 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-29") {
     
     # if the end data is in the future, then use the current date as the final end point
     if (is.na(end_date)) {
-      
       end_date <- Sys.Date()
-      
     }
     
     # primary url to pull from api
@@ -235,24 +238,23 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-29") {
     # include http status code handling in future!
     # avoid http 503 error from thingspeak
     
-    for (i in 1:100) {
-      
-      primary_result <- GET(primary_url)
-      print(primary_result$status_code)
-
-      
-    }
+    # for (i in 1:100) {
+    #   
+    #   primary_result <- GET(primary_url)
+    #   print(primary_result$status_code)
+    # 
+    #   
+    # }
     
   
     # try pulling from thinspeak API  
     try(primary_request <- jsonlite::fromJSON(primary_url))
     try(secondary_request <- jsonlite::fromJSON(secondary_url))
     
-    # break if request is NULL
+    # next if request is NULL
     if (is_empty(primary_request$feeds) | is_empty(secondary_request$feeds)) {
       print(paste0(start_date, "-", end_date, " ", row$Label, " is empty..."))
-      #break
-      
+      next
     } else {
       
       print(paste0(start_date, "-", end_date, " ", row$Label, " is being processed..."))
@@ -329,7 +331,7 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-29") {
                                                ,format = "%Y-%m-%dT%H:%M:%SZ"
                                                ,tz = "GMT"
           )
-          ,breaks = "1 min")) %>%
+          ,breaks = time_resolution)) %>%
           summarize_all(funs(mean))
         
         primary_df$created_at <- as.character(primary_df$created_at)
@@ -362,7 +364,7 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-29") {
                                                ,format = "%Y-%m-%dT%H:%M:%SZ"
                                                ,tz = "GMT"
           )
-          ,breaks = "1 min")) %>%
+          ,breaks = time_resolution)) %>%
           summarize_all(funs(mean))
         
         secondary_df$created_at <- as.character(secondary_df$created_at)
@@ -394,7 +396,7 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-29") {
                                                ,format = "%Y-%m-%dT%H:%M:%SZ"
                                                ,tz = "GMT"
           )
-          ,breaks = "1 min")) %>%
+          ,breaks = time_resolution)) %>%
           summarize_all(funs(mean))
         
         primary_df$created_at <- as.character(primary_df$created_at)
@@ -428,7 +430,7 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-29") {
                                                ,format = "%Y-%m-%dT%H:%M:%SZ"
                                                ,tz = "GMT"
           )
-          ,breaks = "1 min")) %>%
+          ,breaks = time_resolution)) %>%
           summarize_all(funs(mean))
         
         secondary_df$created_at <- as.character(secondary_df$created_at)
@@ -493,6 +495,7 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-29") {
       
       # reorder columns 
       df_wide <- df_wide %>% dplyr::select(
+        
         created_at # put this first out of convention
         #,entry_id
         ,id
@@ -517,27 +520,31 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-29") {
         ,geom # put this last out of convention
       )
 
+      # necessary for using st_write()
       df_wide$geom <- st_as_sfc(df_wide$geom)
-      
       df_wide <- st_as_sf(df_wide)
+      observation <- df_wide
+      
       
       # open connection to our db
       con <- dbConnect(drv = RPostgres::Postgres()
                        ,dbname = db
-                       ,host = host
+                       ,host = 'pgsql102.rc.pdx.edu' # not sure why object host isn't working...
                        ,port = port
                        ,password = pw
                        ,user = user)
       
-      
+      # writes only new observations to db
       st_write(dsn = con
-                  ,obj = df_wide # df to write
+                  ,obj = observation # df to write
                   ,geom_name = "geom"
                   ,table = 'observation' # relation name
-                  ,query = "INSERT INTO observation ON CONFLICT DO NOTHING;"
+                  ,query = "INSERT INTO observation ON CONFLICT DO NOTHING;" # this isn't working, writes twice...
+                  ,layer_options = "OVERWRITE=true"
                   ,drop_table = FALSE
                   ,try_drop = FALSE
                   ,debug = TRUE
+                  ,append = TRUE
       )
       
       
@@ -553,38 +560,39 @@ thingspeak_collect <- function(row, start="2016-01-01", end="2018-05-29") {
       
       
       # remove NA field "not_used"
-      if("not_used" %in% colnames(primary_df)) {
-        
-        primary_df <- primary_df %>% dplyr::select(-not_used)
-        #print("test point 7")
-      }
+      # if("not_used" %in% colnames(primary_df)) {
+      #   
+      #   primary_df <- primary_df %>% dplyr::select(-not_used)
+      #   #print("test point 7")
+      # }
       
 
       # convert to tidy data
-      primary_df <- primary_df %>% gather(field
-                                          ,value
-                                          ,-c(created_at
-                                              ,entry_id
-                                              ,label
-                                              ,id
-                                              ,sensor
-                                              ,geom
-                                              )
-                                          )
+      # primary_df <- primary_df %>% gather(field
+      #                                     ,value
+      #                                     ,-c(created_at
+      #                                         ,entry_id
+      #                                         ,label
+      #                                         ,id
+      #                                         ,sensor
+      #                                         ,geom
+      #                                         )
+      #                                     )
+      
       #print("test point 8")
-      secondary_df <- secondary_df %>% gather(field
-                                              ,value
-                                              ,-c(created_at
-                                                  ,entry_id
-                                                  ,label
-                                                  ,id
-                                                  ,sensor
-                                                  ,geom
-                                                  )
-                                              )
+      # secondary_df <- secondary_df %>% gather(field
+      #                                         ,value
+      #                                         ,-c(created_at
+      #                                             ,entry_id
+      #                                             ,label
+      #                                             ,id
+      #                                             ,sensor
+      #                                             ,geom
+      #                                             )
+      #                                         )
       #print("test point 9")
       # combine primary and secondary data into single tidy df
-      tidy_df <- rbind(primary_df, secondary_df)
+      # tidy_df <- rbind(primary_df, secondary_df)
       #tidy_df$geom <- row$geometry # trying to manipulate geom differently
       #print("test point 10")
       
