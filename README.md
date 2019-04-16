@@ -2,7 +2,7 @@
 
 ## An alternative to manually downloading historical PurpleAir data!
 
-Here's [PurpleAir's manual download page](purpleair.com/sensorlist). It's great for grabbing historical data for a couple of sensors by hand. However, it quickly becomes a burden to use when attempting to download years worth of data for hundreds of sensors at a time! Cue R and Python to the rescue!
+Here's [PurpleAir's manual download page](https://www.purpleair.com/sensorlist). It's great for grabbing historical data for a couple of sensors by hand. However, it quickly becomes a burden to use when attempting to download years worth of data for hundreds of sensors at a time! Cue R and Python to the rescue!
 
 ### Overview
 
